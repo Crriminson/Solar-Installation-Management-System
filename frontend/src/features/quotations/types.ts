@@ -61,3 +61,26 @@ export interface Quotation {
   requires_survey_review: boolean;
   actions: string[];
 }
+
+/*
+  What the customer is shown when signing (F06).
+
+  Deliberately a different shape from Quotation: no staff actions, no
+  internal record ids. If a field is not here, the customer never sees it.
+*/
+export interface Presentation {
+  reference: string;
+  revision_number: number;
+  status: string;
+  snapshot: Quotation["snapshot"];
+  subsidy: SubsidyEstimate[];
+  terms: Quotation["terms"];
+  lines: QuoteLine[];
+  subtotal_excl_tax: string;
+  tax_amount: string;
+  gross_payable_incl_tax: string;
+  valid_until: string | null;
+  issued_at: string | null;
+  content_hash: string;
+  accepted: boolean;
+}

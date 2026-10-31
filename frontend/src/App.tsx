@@ -23,6 +23,7 @@ import MyWorkPage from "./features/work/MyWorkPage";
 import QuotationList from "./features/quotations/quotation_list";
 import QuotationRecord from "./features/quotations/quotation_record";
 import QuotationGenerate from "./features/quotations/quotation_generate";
+import QuotationAccept from "./features/quotations/quotation_accept";
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/quotations" element={<QuotationList />} />
         <Route path="/quotations/new" element={<QuotationGenerate />} />
         <Route path="/quotations/:quoteId" element={<QuotationRecord />} />
+        <Route path="/quotations/:quoteId/accept" element={<QuotationAccept />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

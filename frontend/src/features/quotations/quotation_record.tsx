@@ -99,6 +99,7 @@ function QuotationDetails({ quotation }: { quotation: Quotation }) {
     </section>}
     <div className={styles.actions}>
       {quotation.actions.includes("generate_revision") && <ButtonLink to={`/quotations/new?previous=${quotation.id}`}>{quotation.status === "draft" ? "Regenerate draft" : "Generate revised quotation"}</ButtonLink>}
+      {quotation.actions.includes("accept") && <ButtonLink to={`/quotations/${quotation.id}/accept`}>Accept and sign</ButtonLink>}
       {quotation.actions.includes("reject") && <Button onClick={() => openAction("reject")}>Record rejection</Button>}
       <ButtonLink to={`/quotations?enquiry=${quotation.enquiry}`}>All revisions</ButtonLink>
     </div>

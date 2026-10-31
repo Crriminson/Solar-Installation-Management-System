@@ -1,0 +1,35 @@
+/* Signature capture box. Sized to be comfortable under a thumb. */
+
+.pad {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 600px;
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.canvas {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+  cursor: crosshair;
+
+  /* Without this a finger stroke scrolls the page instead of drawing. */
+  touch-action: none;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
