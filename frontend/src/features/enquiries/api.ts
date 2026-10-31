@@ -74,7 +74,7 @@ export function recordContact(
 
 export function assignEnquiry(
   enquiryId: number,
-  data: { owner: number; next_action: string; next_action_due?: string | null },
+  data: { owner: number; next_action: string; next_action_due?: string | null; revision: number },
 ) {
   return apiPatch<EnquiryListItem>(`enquiries/${enquiryId}/assign/`, data);
 }
@@ -82,6 +82,8 @@ export function assignEnquiry(
 export function changeStatus(
   enquiryId: number,
   data: {
+    revision: number;
+    qualification_checks?: Record<string, boolean>;
     status: EnquiryStatus;
     reason?: string;
     next_action?: string;
@@ -90,7 +92,6 @@ export function changeStatus(
 ) {
   return apiPost<EnquiryListItem>(`enquiries/${enquiryId}/status/`, data);
 }
-
 
 export function reviewDuplicate(enquiry: EnquiryListItem, decision: string, reason: string) {
   return apiPost<EnquiryListItem>(`enquiries/${enquiry.id}/duplicate-review/`, { revision: enquiry.revision, decision, reason });

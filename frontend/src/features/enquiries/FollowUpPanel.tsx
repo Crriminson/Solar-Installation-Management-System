@@ -11,14 +11,13 @@
   every other move needs a next action with a date.
 */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import ActivityTimeline from "../../components/activity_timeline";
-import { hasRole, useStaffUser } from "../auth/session";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import {
   SelectField,
@@ -40,6 +39,7 @@ import {
   nowForDateTimeInput,
 } from "../../lib/format";
 import { startSurvey } from "../surveys/api";
+import { hasRole, useStaffUser } from "../auth/session";
 import {
   assignEnquiry,
   billDownloadUrl,
@@ -99,6 +99,7 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
   function refreshEverything() {
     queryClient.invalidateQueries({ queryKey: ["enquiries"] });
     queryClient.invalidateQueries({ queryKey: ["contacts", enquiry.id] });
+    queryClient.invalidateQueries({ queryKey: ["activity"] });
   }
 
   const { customer } = enquiry.site;
@@ -136,10 +137,8 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
         <>
           <OwnerForm enquiry={enquiry} onDone={refreshEverything} />
           <LogContactForm enquiry={enquiry} onDone={refreshEverything} />
-          {/* Keyed on status: the choices change after each move, so the
-              form must start again rather than keep a stale selection. */}
+          {/* Background refreshes keep typed input and its original edit revision. */}
           <ChangeStatusForm
-            key={enquiry.status}
             enquiry={enquiry}
             onDone={refreshEverything}
           />
@@ -288,6 +287,7 @@ function OwnerForm({
   onDone: () => void;
 }) {
   const staff = useQuery({ queryKey: ["staff"], queryFn: fetchStaff });
+  const [revision, setRevision] = useState(enquiry.revision);
 
   const [owner, setOwner] = useState(enquiry.owner ? String(enquiry.owner) : "");
   const [nextAction, setNextAction] = useState(enquiry.next_action);
@@ -296,14 +296,15 @@ function OwnerForm({
   const mutation = useMutation({
     mutationFn: () =>
       assignEnquiry(enquiry.id, {
+        revision,
         owner: Number(owner),
         next_action: nextAction,
         next_action_due: due || null,
       }),
-    onSuccess: onDone,
+    onSuccess: (updated) => { setRevision(updated.revision); onDone(); },
   });
 
-  const options = (staff.data ?? []).map((person) => ({
+  const options = (staff.data ?? []).filter((person) => person.roles.includes("sales") || person.is_administrator).map((person) => ({
     value: String(person.id),
     label: person.name,
   }));
@@ -327,6 +328,7 @@ function OwnerForm({
           placeholder="Choose someone"
         />
         <TextField label="Next action" value={nextAction} onChange={setNextAction} />
+        {staff.isError && <p role="alert">{describeError(staff.error)} <Button onClick={() => staff.refetch()}>Retry</Button></p>}
         <TextField label="Due" type="date" value={due} onChange={setDue} />
 
         {mutation.isError && (
@@ -451,23 +453,36 @@ function ChangeStatusForm({
   onDone: () => void;
 }) {
   const options = enquiry.next_statuses;
-  const [target, setTarget] = useState<EnquiryStatus>(options[0]);
+  const editRevision = useRef<number | null>(null);
+  const [selectedTarget, setSelectedTarget] = useState<EnquiryStatus | null>(null);
+  const target = selectedTarget ?? options[0];
   const [nextAction, setNextAction] = useState("");
   const [due, setDue] = useState("");
   const [reason, setReason] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const [checks, setChecks] = useState<Record<string, boolean>>({});
+  function markEditing() {
+    if (editRevision.current === null) editRevision.current = enquiry.revision;
+  }
 
   const losing = target === "lost";
 
   const mutation = useMutation({
     mutationFn: () =>
       changeStatus(enquiry.id, {
+        revision: editRevision.current ?? enquiry.revision,
+        qualification_checks: checks,
         status: target,
-        reason: losing ? reason : "",
+        reason: losing || target === "qualified" ? reason : "",
         next_action: losing ? "" : nextAction,
         next_action_due: losing ? null : due,
       }),
-    onSuccess: onDone,
+    onSuccess: () => {
+      editRevision.current = null;
+      setSelectedTarget(null);
+      setChecks({}); setNextAction(""); setDue(""); setReason("");
+      onDone();
+    },
   });
 
   const canSubmit = losing
@@ -491,7 +506,7 @@ function ChangeStatusForm({
         <SelectField
           label="New status"
           value={target}
-          onChange={(value) => setTarget(value as EnquiryStatus)}
+          onChange={(value) => { markEditing(); setSelectedTarget(value as EnquiryStatus); }}
           options={options.map((option) => ({
             value: option,
             label: ENQUIRY_STATUSES[option].label,
@@ -499,12 +514,19 @@ function ChangeStatusForm({
         />
 
         {/* Losing a lead without a reason teaches the business nothing. */}
+        {target === "qualified" && <fieldset>
+          <legend>Qualification checks</legend>
+          {Object.entries({ roof: "Roof availability checked", consumption: "Consumption reviewed", grid: "Grid connection suitability checked", requirements: "Customer requirements confirmed", documents: "Documents checked for completeness" }).map(([name, label]) =>
+            <label key={name} className={styles.checkbox}><input type="checkbox" checked={checks[name] ?? false}
+              onChange={(event) => { markEditing(); setChecks((current) => ({ ...current, [name]: event.target.checked })); }} />{label}</label>)}
+          <TextAreaField label="Why does this lead qualify?" required value={reason} onChange={(value) => { markEditing(); setReason(value); }} />
+        </fieldset>}
         {losing ? (
           <TextAreaField
             label="Why was this lead lost?"
             required
             value={reason}
-            onChange={setReason}
+            onChange={(value) => { markEditing(); setReason(value); }}
           />
         ) : (
           <>
@@ -512,14 +534,14 @@ function ChangeStatusForm({
               label="What happens next"
               required
               value={nextAction}
-              onChange={setNextAction}
+              onChange={(value) => { markEditing(); setNextAction(value); }}
             />
             <TextField
               label="Due"
               required
               type="date"
               value={due}
-              onChange={setDue}
+              onChange={(value) => { markEditing(); setDue(value); }}
             />
           </>
         )}
@@ -562,7 +584,7 @@ function ChangeStatusForm({
 // ============================================================
 
 function ContactHistory({ enquiryId }: { enquiryId: number }) {
-  const { data, isPending } = useQuery({
+  const { data, isPending, error, isError, refetch } = useQuery({
     queryKey: ["contacts", enquiryId],
     queryFn: () => fetchContactLog(enquiryId),
   });
@@ -572,6 +594,7 @@ function ContactHistory({ enquiryId }: { enquiryId: number }) {
       <h3 className={styles.sectionTitle}>Contact history</h3>
 
       {isPending && <p className={styles.muted}>Loading…</p>}
+      {isError && <p role="alert">{describeError(error)} <Button onClick={() => refetch()}>Retry</Button></p>}
 
       {data && data.results.length === 0 && (
         <p className={styles.muted}>Nobody has contacted this customer yet.</p>

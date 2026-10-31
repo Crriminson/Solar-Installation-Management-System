@@ -63,6 +63,8 @@ export interface ContactLogEntry {
 
 export interface EnquiryListItem {
   revision: number;
+  qualification_checks: Record<string, boolean>;
+  qualification_reason: string;
   possible_duplicate_of: number | null;
   duplicate_candidate: { id: number; full_name: string; phone: string } | null;
   duplicate_review: string;
