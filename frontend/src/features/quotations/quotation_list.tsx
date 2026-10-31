@@ -19,6 +19,7 @@ import { hasRole, useStaffUser } from "../auth/session";
 import { fetchQuotations } from "./api";
 import type { Quotation } from "./types";
 import styles from "./quotations.module.css";
+import { AddIcon } from "../../design/icons";
 
 const COLUMNS: readonly Column<Quotation>[] = [
   { header: "Quotation", render: (quote) => <Reference>{quote.reference} · R{quote.revision_number}</Reference> },
@@ -43,7 +44,7 @@ export default function QuotationList() {
 
   return <>
     <PageHeader title="Quotations" subtitle="Generated from approved surveys and reviewed packages."
-      actions={hasRole(user, "sales") && <ButtonLink to="/quotations/new" variant="primary">Generate quotation</ButtonLink>} />
+      actions={hasRole(user, "sales") && <ButtonLink to="/quotations/new" variant="primary" icon={<AddIcon aria-hidden />}>Generate quotation</ButtonLink>} />
     <FilterTabs label="Quotation status" options={VIEWS} value={list.view} onChange={list.setView} />
     <div className={styles.toolbar}>
       <SearchInput label="Search quotation or customer" value={list.search} onSearch={list.setSearch} />

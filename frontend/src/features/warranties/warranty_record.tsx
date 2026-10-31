@@ -39,9 +39,8 @@ function WarrantyDetails({ warranty }: { warranty: WarrantyDetail }) {
   return <>
     <PageHeader back={{ to: "/warranties", label: "Warranties" }}
       title={<Reference>{warranty.asset_id}</Reference>}
-      subtitle={`${warranty.product_name} · ${warranty.customer_name}`}>
-      <StatusBadge status={WARRANTY_STATUSES[warranty.status]} />
-    </PageHeader>
+      subtitle={`${warranty.product_name} · ${warranty.customer_name}`}
+      status={<StatusBadge status={WARRANTY_STATUSES[warranty.status]} />} />
 
     <section className={styles.section}>
       <h2>Coverage</h2>

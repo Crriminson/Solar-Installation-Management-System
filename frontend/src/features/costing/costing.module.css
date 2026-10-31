@@ -22,7 +22,7 @@
 .facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 
 /* The line the whole table adds up to. */
-.total { font-weight: 600; border-top: 1px solid var(--color-border); padding-top: var(--space-2); }
+.total { font-weight: var(--weight-semibold); border-top: 1px solid var(--color-border); padding-top: var(--space-2); }
 
 .reversed { text-decoration: line-through; color: var(--color-text-muted); }
 .error { color: var(--tone-blocked-text); font-size: var(--text-sm); }

@@ -25,6 +25,7 @@ import { fetchJobs } from "./api";
 import { JOB_KINDS, JOB_STATUSES } from "./status";
 import type { Job } from "./types";
 import styles from "./scheduling.module.css";
+import { AddIcon } from "../../design/icons";
 
 const COLUMNS: readonly Column<Job>[] = [
   {
@@ -84,7 +85,7 @@ export default function JobList() {
         ? "Surveys, installations and service visits."
         : "Your assigned visits."}
       actions={canBook &&
-        <ButtonLink to="/schedule/new" variant="primary">Book a visit</ButtonLink>} />
+        <ButtonLink to="/schedule/new" variant="primary" icon={<AddIcon aria-hidden />}>Book a visit</ButtonLink>} />
     <FilterTabs label="Job status" options={VIEWS} value={list.view}
       onChange={list.setView} />
     <div className={styles.toolbar}>

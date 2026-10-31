@@ -18,6 +18,7 @@ import { formatDate } from "../../lib/format";
 import { fetchMetric, metricCsvUrl, type MetricRow } from "./api";
 import { formatFigure } from "./figures";
 import { dashboardQuery } from "./filters";
+import { CsvIcon } from "../../design/icons";
 
 export default function MetricPage() {
   const { metricKey = "" } = useParams();
@@ -52,7 +53,7 @@ export default function MetricPage() {
   return <>
     <PageHeader back={{ to: `/dashboard${suffix ? `?${suffix}` : ""}`, label: "Dashboard" }}
       title={metric.label} subtitle={`${metric.caption} · ${metric.period}`}
-      actions={<ButtonLink to={metricCsvUrl(metricKey, query)} reloadDocument>Export CSV</ButtonLink>} />
+      actions={<ButtonLink to={metricCsvUrl(metricKey, query)} reloadDocument icon={<CsvIcon aria-hidden />}>Export CSV</ButtonLink>} />
 
     {metric.rows.length === 0
       ? <EmptyMessage>Nothing behind this figure in this period.</EmptyMessage>

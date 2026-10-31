@@ -18,6 +18,7 @@ import { fetchPurchaseOrders } from "./api";
 import { PURCHASE_STATUSES } from "./status";
 import type { PurchaseOrder } from "./types";
 import styles from "./inventory.module.css";
+import { AddIcon } from "../../design/icons";
 
 const COLUMNS: readonly Column<PurchaseOrder>[] = [
   { header: "Purchase", render: (purchase) => <Reference>{purchase.reference}</Reference> },
@@ -63,7 +64,7 @@ export default function PurchaseList() {
   return <>
     <PageHeader title="Purchase orders"
       subtitle="Stock only exists because one of these brought it in."
-      actions={<ButtonLink to="/purchasing/new" variant="primary">New purchase order</ButtonLink>} />
+      actions={<ButtonLink to="/purchasing/new" variant="primary" icon={<AddIcon aria-hidden />}>New purchase order</ButtonLink>} />
     <FilterTabs label="Purchase status" options={VIEWS} value={list.view} onChange={list.setView} />
     <div className={styles.toolbar}>
       <SearchInput label="Search purchase or supplier" value={list.search}

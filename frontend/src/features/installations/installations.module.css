@@ -34,7 +34,7 @@
   text-transform: capitalize;
 }
 
-.scanLabel { font-weight: 600; }
+.scanLabel { font-weight: var(--weight-semibold); }
 .scanInput {
   height: 52px;
   font-size: var(--text-lg);

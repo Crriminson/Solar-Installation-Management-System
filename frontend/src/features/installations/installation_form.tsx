@@ -84,9 +84,8 @@ function Form({ report }: { report: InstallationReport }) {
 
   return <>
     <PageHeader back={{ to: `/schedule/${report.job}`, label: "Back to the job" }}
-      title="Installation record" subtitle={report.customer_name}>
-      <StatusBadge status={REPORT_STATUSES[report.status]} />
-    </PageHeader>
+      title="Installation record" subtitle={report.customer_name}
+      status={<StatusBadge status={REPORT_STATUSES[report.status]} />} />
 
     {report.status === "refused" && report.acceptance &&
       <p className={styles.blocked}>

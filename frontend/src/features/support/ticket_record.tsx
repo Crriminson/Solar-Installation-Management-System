@@ -199,9 +199,8 @@ function TicketDetails({ ticket }: { ticket: Ticket }) {
   return <>
     <PageHeader back={{ to: "/tickets", label: "Support" }}
       title={<Reference>{ticket.reference}</Reference>}
-      subtitle={`${ticket.customer_name}${ticket.customer_phone ? ` · ${ticket.customer_phone}` : ""}`}>
-      <StatusBadge status={TICKET_STATUSES[ticket.status]} />
-    </PageHeader>
+      subtitle={`${ticket.customer_name}${ticket.customer_phone ? ` · ${ticket.customer_phone}` : ""}`}
+      status={<StatusBadge status={TICKET_STATUSES[ticket.status]} />} />
 
     {ticket.is_blocked && <p className={styles.blocked}>Blocked: {ticket.blocked_reason}</p>}
 

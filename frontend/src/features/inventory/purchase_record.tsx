@@ -82,9 +82,8 @@ function PurchaseDetails({ purchase }: { purchase: PurchaseOrder }) {
   return <>
     <PageHeader back={{ to: "/purchasing", label: "Purchase orders" }}
       title={<Reference>{purchase.reference}</Reference>}
-      subtitle={purchase.supplier_name}>
-      <StatusBadge status={PURCHASE_STATUSES[purchase.status]} />
-    </PageHeader>
+      subtitle={purchase.supplier_name}
+      status={<StatusBadge status={PURCHASE_STATUSES[purchase.status]} />} />
 
     <section className={styles.section}>
       <h2>Supplier and invoice</h2>

@@ -33,6 +33,7 @@ import NextStep from "./NextStep";
 import { QUEUE_REFRESH_MS } from "./queue";
 import type { EnquiryListItem } from "./types";
 import styles from "./SalesQueue.module.css";
+import { AddIcon } from "../../design/icons";
 
 /* The slices managers asked for, plus the leads nobody has touched. */
 const VIEWS = [
@@ -97,7 +98,7 @@ export default function SalesQueue() {
       <PageHeader
         title="Enquiries"
         actions={
-          <ButtonLink to="/enquiries/new" variant="primary">
+          <ButtonLink to="/enquiries/new" variant="primary" icon={<AddIcon aria-hidden />}>
             New enquiry
           </ButtonLink>
         }

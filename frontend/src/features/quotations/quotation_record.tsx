@@ -66,9 +66,8 @@ function QuotationDetails({ quotation }: { quotation: Quotation }) {
   return <>
     <PageHeader back={{ to: "/quotations", label: "Quotations" }} title={<Reference>{quotation.reference} · R{quotation.revision_number}</Reference>}
       subtitle={`${snapshot.customer.name} · ${snapshot.customer.phone}`}
-      actions={quotation.actions.includes("issue") && <Button variant="primary" onClick={() => openAction("issue")}>Issue quotation</Button>}>
-      <StatusBadge status={QUOTE_STATUSES[quotation.display_status]} />
-    </PageHeader>
+      actions={quotation.actions.includes("issue") && <Button variant="primary" onClick={() => openAction("issue")}>Issue quotation</Button>}
+      status={<StatusBadge status={QUOTE_STATUSES[quotation.display_status]} />} />
     {quotation.requires_survey_review && <p className={styles.error}>A newer survey revision was approved. Review it and regenerate before issuing or accepting this quotation.</p>}
     <section className={styles.section}>
       <h2>Source and terms</h2>

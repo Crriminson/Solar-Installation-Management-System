@@ -76,9 +76,8 @@ function OrderDetails({ order }: { order: Order }) {
     <PageHeader back={{ to: "/orders", label: "Orders" }}
       title={<Reference>{order.reference}</Reference>}
       subtitle={`${order.customer_name} · from ${order.quotation_reference}`}
-      actions={open && <ButtonLink to={`/quotations/${order.quotation}`}>View quotation</ButtonLink>}>
-      <StatusBadge status={ORDER_STATUSES[order.status]} />
-    </PageHeader>
+      actions={open && <ButtonLink to={`/quotations/${order.quotation}`}>View quotation</ButtonLink>}
+      status={<StatusBadge status={ORDER_STATUSES[order.status]} />} />
 
     <p className={order.dispatch_allowed ? styles.cleared : styles.waitingBanner}>
       {order.dispatch_allowed

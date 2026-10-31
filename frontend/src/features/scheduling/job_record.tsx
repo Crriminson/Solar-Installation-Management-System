@@ -74,9 +74,8 @@ function JobDetails({ job }: { job: Job }) {
   return <>
     <PageHeader back={{ to: "/schedule", label: "Schedule" }}
       title={JOB_KINDS[job.kind] ?? job.kind}
-      subtitle={`${job.customer_name} · ${job.site_address}`}>
-      <StatusBadge status={JOB_STATUSES[job.status]} />
-    </PageHeader>
+      subtitle={`${job.customer_name} · ${job.site_address}`}
+      status={<StatusBadge status={JOB_STATUSES[job.status]} />} />
 
     {job.is_blocked && <p className={styles.blocked}>{job.blocked_reason}</p>}
 

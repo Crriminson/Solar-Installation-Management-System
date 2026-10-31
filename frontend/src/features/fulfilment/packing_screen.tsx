@@ -63,9 +63,8 @@ function Bench({ fulfilment }: { fulfilment: Fulfilment }) {
   return <>
     <PageHeader back={{ to: "/packing", label: "Packing" }}
       title={<Reference>{fulfilment.order_reference}</Reference>}
-      subtitle={fulfilment.customer_name}>
-      <StatusBadge status={FULFILMENT_STATUSES[fulfilment.status]} />
-    </PageHeader>
+      subtitle={fulfilment.customer_name}
+      status={<StatusBadge status={FULFILMENT_STATUSES[fulfilment.status]} />} />
 
     {fulfilment.status === "blocked" &&
       <p className={styles.blocked}>{fulfilment.blocked_reason}</p>}

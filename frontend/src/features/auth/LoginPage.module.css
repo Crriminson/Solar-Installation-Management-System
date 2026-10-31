@@ -35,7 +35,7 @@
 .headline {
   margin-bottom: var(--space-3);
   font-size: clamp(1.75rem, 3vw, 2.25rem);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   line-height: 1.15;
   letter-spacing: -0.02em;
   text-wrap: balance;

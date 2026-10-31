@@ -25,6 +25,7 @@ import { CATEGORY_OPTIONS, labelOf } from "./labels";
 import ProductPanel from "./ProductPanel";
 import type { Product } from "./types";
 import styles from "./ProductList.module.css";
+import { AddIcon } from "../../design/icons";
 
 const VIEWS = [
   { key: "all", label: "All" },
@@ -62,7 +63,7 @@ export default function ProductList() {
         title="Products"
         actions={
           user.can_manage_catalogue && (
-            <ButtonLink to="/catalogue/products/new" variant="primary">
+            <ButtonLink to="/catalogue/products/new" variant="primary" icon={<AddIcon aria-hidden />}>
               New product
             </ButtonLink>
           )
