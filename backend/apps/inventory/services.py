@@ -7,7 +7,7 @@ StockMovement row in the same transaction, so the history can always
 explain the present count.
 """
 
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
 from django.utils import timezone
@@ -154,7 +154,7 @@ def _receive_serialized(line, row, receipt, actor):
 def _receive_bulk(line, row, receipt, actor):
     """One lot per batch id. No serial is invented for a length of cable."""
     batch_id = (row.get("batch_id") or "").strip()
-    quantity = row.get("quantity")
+    quantity = _as_decimal(row.get("quantity"))
 
     if not batch_id:
         raise ValidationError(
@@ -214,6 +214,7 @@ def move_stock(actor, *, unit=None, lot=None, to_status, reason,
         )
 
     from_status = item.status
+    quantity = _as_decimal(quantity)
     moved = quantity if quantity is not None else (
         item.quantity if lot else Decimal("1.00")
     )
@@ -260,6 +261,22 @@ def _write_movement(actor, *, unit=None, lot=None, reason, from_status, to_statu
 # ============================================================
 # Helpers
 # ============================================================
+
+def _as_decimal(value):
+    """
+    Accepts a quantity however it arrives.
+
+    Serializers hand over a Decimal, but these services are also called
+    directly by F09 and F11, where a string from JSON would otherwise
+    blow up on the first comparison.
+    """
+    if value is None or isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError):
+        raise ValidationError({"quantity": ["That is not a number."]})
+
 
 def _locked_purchase(order_id):
     purchase = PurchaseOrder.objects.select_for_update().filter(pk=order_id).first()

@@ -81,6 +81,7 @@ OUR_APPS = [
     "apps.subsidies",
     "apps.orders",
     "apps.inventory",
+    "apps.fulfilment",
 ]
 
 INSTALLED_APPS = [
