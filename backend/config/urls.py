@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/v1/", include("apps.surveys.urls")),     # F03
     path("api/v1/", include("apps.catalogue.urls")),   # F04
     path("api/v1/", include("apps.quotations.urls")),  # F05, F06
+    path("api/v1/", include("apps.orders.urls")),      # F07
 ]

@@ -79,6 +79,7 @@ OUR_APPS = [
     "apps.catalogue",
     "apps.quotations",
     "apps.subsidies",
+    "apps.orders",
 ]
 
 INSTALLED_APPS = [
