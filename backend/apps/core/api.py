@@ -1,5 +1,6 @@
 """Consistent staff access, bounded lists and stale-edit responses."""
 
+from decimal import Decimal
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
@@ -23,6 +24,22 @@ def check_revision(record, data):
         raise ValidationError({"revision": ["Send the record revision shown on screen."]})
     if value != record.revision:
         raise Conflict()
+
+
+def exact_decimals(data):
+    """
+    Turns every Decimal in a plain response into text.
+
+    Serializers already do this, but DRF renders a bare Decimal as a float,
+    and money is never binary floating point (spec.md section 6).
+    """
+    if isinstance(data, Decimal):
+        return str(data)
+    if isinstance(data, dict):
+        return {key: exact_decimals(value) for key, value in data.items()}
+    if isinstance(data, list):
+        return [exact_decimals(value) for value in data]
+    return data
 
 
 def business_date(moment=None):

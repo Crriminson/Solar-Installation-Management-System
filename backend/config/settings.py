@@ -86,6 +86,7 @@ OUR_APPS = [
     "apps.installations",
     "apps.warranties",
     "apps.support",
+    "apps.costing",
 ]
 
 INSTALLED_APPS = [
