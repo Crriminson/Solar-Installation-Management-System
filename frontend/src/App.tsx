@@ -30,6 +30,8 @@ import PurchaseList from "./features/inventory/purchase_list";
 import PurchaseCreate from "./features/inventory/purchase_create";
 import PurchaseRecord from "./features/inventory/purchase_record";
 import StockList from "./features/inventory/stock_list";
+import FulfilmentList from "./features/fulfilment/fulfilment_list";
+import PackingScreen from "./features/fulfilment/packing_screen";
 
 export default function App() {
   return (
@@ -51,6 +53,8 @@ export default function App() {
         <Route path="/purchasing/new" element={<PurchaseCreate />} />
         <Route path="/purchasing/:purchaseId" element={<PurchaseRecord />} />
         <Route path="/stock" element={<StockList />} />
+        <Route path="/packing" element={<FulfilmentList />} />
+        <Route path="/packing/:fulfilmentId" element={<PackingScreen />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
