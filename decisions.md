@@ -92,6 +92,10 @@ Not done:
 | D059 | A time entry with no cost rate is refused rather than saved at zero | Confirmed | D025 warns such an entry leaves job margin incomplete. A zero-cost entry would make the job look better than it was, so Finance sets the rate first |
 | D060 | Replacement units and service labour are service cost, outside operational margin | Confirmed | Spec.md F15 shows warranty service cost separately. The failed unit's return reverses its original cost, so the job is not charged for both |
 | D061 | A refund reduces net revenue at the order's own tax ratio | Confirmed | Refunds are paid tax-inclusive and revenue excludes tax |
+| D062 | Every dashboard figure is computed from the rows its drill-down shows | Confirmed | Spec.md F15: a number the director cannot trace is not trusted. A headline with no separate sum cannot disagree with its records |
+| D063 | The dashboard is for the Director and Administrator only | Confirmed | rules.md section 4 grants the dashboard and exports to the Director. Every figure is margin or cash |
+| D064 | Cash paid is not narrowed by the project filters | Confirmed | Supplier and technician payments belong to no single project, so a filtered figure would be misleading rather than smaller |
+| D065 | ReportLab added as a dependency | Confirmed | spec.md section 3 names it for PDF generation and F15 requires PDF summaries. Added here per rules.md section 8. The PDF shows INR rather than the rupee sign, which the built-in fonts lack |
 
 ## 3. Resolved decisions and their consequences
 
@@ -179,12 +183,14 @@ Corroborating official sources for central, Delhi and UP:
 | F12 | Warranties | Verified | Delivery issues one warranty per serialized unit in its own transaction, with the policy copied and the row uneditable. Leap day, Kolkata start date, snapshot, inheritance and replacement after expiry tested; concurrent deliveries and replacements tested on real threads. 386 backend tests pass on PostgreSQL 16; 15 of 15 deliberately broken rules caught; browser delivery, serial lookup, role refusal and replacement history checked at desktop and phone width. Replacement is a service until F13 calls it (D051). See f12-warranties.md |
 | F13 | Support and replacements | Verified | Lookup by name, phone, order or serial with warranty status beside each unit. Coverage judged on the server's complaint time and fixed once work starts; claimed dates go to manager review. Covered work invoices zero with internal cost kept; uncovered work needs a named approval and stops at the approved total. A replacement issues the new unit through every stock state, takes the old one back and moves the warranty. Closes only on recorded customer confirmation, enforced by a database constraint. Double submits, double finishes and a contested spare tested on real threads. Browser walkthrough across support, operations, technician and finance |
 | F14 | Costs and finance | Verified | Dated technician rates snapshotted onto time entries; accrual ledger with payments capped at the balance, tested on real threads. Project expenses and supplier invoices and payments, all reversible with a reason. One bulk cost function shared with F15. Double-counting rules tested: stock only when issued, returns reverse cost, payments never enter margin, service cost stays outside operational margin. Browser check of rate, hours, payment and job cost |
-| F15 | Dashboard and exports | Not Started | — |
+| F15 | Dashboard and exports | Verified | Every figure in the spec, each computed from the rows its drill-down shows (D062), with today, week, month, custom, status and system type filters on Asia/Kolkata boundaries. Four money figures on separate captioned tiles. CSV and PDF stamp their period; CSV cells neutralised against spreadsheet formulas. Director and Administrator only. Browser check of tiles, drill-down and both exports, with no sideways scrolling at phone width. p95 targets in spec.md section 12 not measured |
 | F16 | Telegram | Not Started | Final phase by D006 |
 | F17 | Subsidies and paperwork | In Progress | Only the estimator required by F05: versioned launch-register rules with provenance, eligibility, dated slabs/caps and separate per-kWh incentives. Application tracking and paperwork remain unimplemented |
 | F18 | Audit, search, reliability | Not Started | — |
 | F19 | Generated documents | Not Started | — |
 | F20 | Work queues and notifications | Not Started | — |
+
+Verification for F13 to F15, 31 Oct 2026, against a throwaway PostgreSQL 16.13 with Python 3.13.5: 579 backend tests pass, 193 of them new. `npm run typecheck`, lint and build are clean. Each of 28 core rules was broken on purpose and every break is caught by a test; one was missed at first because its test used zero-charge invoices, so a test with real money was added. Reading the PDF's contents found its stamp and CSV dates using UTC, fixed with failing tests first. The dashboard reads the same costing function as the order screen, so the two cannot disagree. Not yet done: spec.md section 12 performance measurements, and seed data for the full lifecycle.
 
 ## 6. Scope change log
 

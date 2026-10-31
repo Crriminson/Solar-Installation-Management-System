@@ -35,14 +35,16 @@ export default function Button({
 export function ButtonLink({
   to,
   variant = "secondary",
+  reloadDocument = false,
   children,
 }: {
   to: string;
   variant?: Variant;
+  reloadDocument?: boolean;     // a real page load, for a file download
   children: React.ReactNode;
 }) {
   return (
-    <Link to={to} className={`${styles.button} ${styles[variant]}`}>
+    <Link to={to} reloadDocument={reloadDocument} className={`${styles.button} ${styles[variant]}`}>
       {children}
     </Link>
   );

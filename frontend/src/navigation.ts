@@ -22,6 +22,7 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     title: "",
     items: [
       { label: "My work", to: "/work", roles: [] },
+      { label: "Dashboard", to: "/dashboard", roles: ["director"] },
     ],
   },
   {
