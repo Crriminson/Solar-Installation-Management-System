@@ -75,6 +75,7 @@ OUR_APPS = [
     "apps.accounts",
     "apps.customers",
     "apps.surveys",
+    "apps.catalogue",
 ]
 
 INSTALLED_APPS = [

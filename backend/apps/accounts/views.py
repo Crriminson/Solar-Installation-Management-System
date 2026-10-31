@@ -19,6 +19,11 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
+from apps.catalogue.permissions import (
+    can_manage_catalogue,
+    can_review_packages,
+    can_view_costs,
+)
 from apps.surveys.models import can_approve_surveys
 
 
@@ -46,6 +51,9 @@ def describe_staff(user):
         "roles": user.roles,
         "is_administrator": user.is_superuser or "administrator" in user.roles,
         "can_approve_surveys": can_approve_surveys(user),
+        "can_manage_catalogue": can_manage_catalogue(user),
+        "can_review_packages": can_review_packages(user),
+        "can_view_costs": can_view_costs(user),
     }
 
 
