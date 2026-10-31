@@ -55,13 +55,14 @@ export default function ProductForm() {
   if (isPending) return <LoadingMessage label="Loading product…" />;
   if (isError) return <ErrorMessage error={error} onRetry={refetch} />;
 
-  return <Form productId={productId} initial={toValues(data)} />;
+  return <Form productId={productId} revision={data.revision} initial={toValues(data)} />;
 }
 
-function Form({ productId, initial }: { productId?: string; initial: Values }) {
+function Form({ productId, revision, initial }: { productId?: string; revision?: number; initial: Values }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [values, setValues] = useState(initial);
+  const [sourceRevision] = useState(revision);
 
   const policies = useQuery({
     queryKey: ["warranty-policies"],
@@ -71,7 +72,7 @@ function Form({ productId, initial }: { productId?: string; initial: Values }) {
   const mutation = useMutation({
     mutationFn: () => {
       const payload = toPayload(values);
-      return productId ? updateProduct(productId, payload) : createProduct(payload);
+      return productId ? updateProduct(productId, { ...payload, revision: sourceRevision }) : createProduct(payload);
     },
     onSuccess: (product) => {
       queryClient.invalidateQueries({ queryKey: ["products"] });

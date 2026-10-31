@@ -25,6 +25,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
 from django.utils import timezone
+from apps.core.api import business_date
+from apps.core.models import record_event
 
 SMALLEST_QUANTITY = Decimal("0.01")
 
@@ -146,6 +148,7 @@ class Product(models.Model):
     """One thing the company supplies, or a labour line."""
 
     sku = models.CharField(max_length=40, unique=True)
+    revision = models.PositiveIntegerField(default=1)
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
     category = models.CharField(max_length=20, choices=Category.choices)
@@ -179,6 +182,10 @@ class Product(models.Model):
 
     class Meta:
         ordering = ["sku", "id"]
+        constraints = [
+            models.CheckConstraint(condition=models.Q(gst_rate_percent__gte=0, gst_rate_percent__lte=100,
+                                                      stocking_quantity__gt=0), name="product_valid_tax_and_stocking_unit"),
+        ]
 
     def __str__(self):
         return f"{self.sku} {self.name}"
@@ -190,7 +197,7 @@ class Product(models.Model):
         Reads self.prices.all() so a prefetched list is used and a
         catalogue page does not run one query per product.
         """
-        today = timezone.localdate()
+        today = business_date()
         in_force = [
             price for price in self.prices.all() if price.effective_from <= today
         ]
@@ -219,6 +226,9 @@ class ProductPrice(models.Model):
     class Meta:
         ordering = ["-effective_from", "-id"]
         constraints = [
+            models.CheckConstraint(condition=models.Q(selling_price_excl_tax__gte=0) &
+                                   (models.Q(purchase_cost_excl_tax__isnull=True) | models.Q(purchase_cost_excl_tax__gte=0)),
+                                   name="product_price_nonnegative_amounts"),
             models.UniqueConstraint(
                 fields=["product", "effective_from"],
                 name="one_price_per_product_per_date",
@@ -227,6 +237,14 @@ class ProductPrice(models.Model):
 
     def __str__(self):
         return f"{self.product.sku} from {self.effective_from}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and ProductPrice.objects.filter(pk=self.pk).exists():
+            raise ValidationError("Prices are append-only. Add a price with a new effective date.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Price history cannot be deleted.")
 
 
 # ============================================================
@@ -295,6 +313,8 @@ class PackageTemplate(models.Model):
                 **_starting_figures(latest),
             )
             version.save()
+            record_event(version, "draft_created", created_by,
+                         after={"version_number": version.version_number})
 
             if latest:
                 PackageLine.objects.bulk_create([
@@ -344,6 +364,7 @@ class PackageVersion(models.Model):
         PackageTemplate, on_delete=models.PROTECT, related_name="versions"
     )
     version_number = models.PositiveIntegerField()
+    revision = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=20, choices=VersionStatus.choices, default=VersionStatus.DRAFT
     )
@@ -381,6 +402,10 @@ class PackageVersion(models.Model):
     class Meta:
         ordering = ["-version_number"]
         constraints = [
+            models.CheckConstraint(condition=models.Q(cable_waste_factor__gte=1, cable_termination_buffer_m__gte=0) &
+                                   (models.Q(battery_depth_of_discharge__isnull=True) |
+                                    models.Q(battery_depth_of_discharge__gt=0, battery_depth_of_discharge__lte=1)),
+                                   name="package_valid_sizing_parameters"),
             models.UniqueConstraint(
                 fields=["template", "version_number"],
                 name="unique_version_number_per_template",
@@ -452,6 +477,8 @@ class PackageVersion(models.Model):
         Runs with the template locked, so two reviews at once cannot
         both retire the same version and leave two active.
         """
+        if not reviewer.has_role("administrator"):
+            raise ValidationError("Only an administrator may review and activate a package.")
         with transaction.atomic():
             PackageTemplate.objects.select_for_update().get(pk=self.template_id)
             self.refresh_from_db(fields=["status"])
@@ -472,6 +499,13 @@ class PackageVersion(models.Model):
             self.reviewed_by = reviewer
             self.reviewed_at = timezone.now()
             self.save(update_fields=["status", "reviewed_by", "reviewed_at"])
+            record_event(self, "activated", reviewer,
+                         before={"status": VersionStatus.DRAFT},
+                         after={"status": VersionStatus.ACTIVE})
+            if current:
+                record_event(current, "retired", reviewer,
+                             before={"status": VersionStatus.ACTIVE},
+                             after={"status": VersionStatus.RETIRED})
 
 
 # ============================================================
@@ -495,6 +529,9 @@ class PackageLine(models.Model):
     class Meta:
         ordering = ["id"]
         constraints = [
+            models.CheckConstraint(condition=models.Q(basis="fixed", quantity__isnull=False, quantity__gt=0) |
+                                   (models.Q(basis__in=["cable_route", "battery_load"]) & models.Q(quantity__isnull=True)),
+                                   name="package_line_valid_quantity_basis"),
             models.UniqueConstraint(
                 fields=["version", "product"], name="one_line_per_product_per_version",
             ),

@@ -240,7 +240,7 @@ class WritePermissionTests(CatalogueTestCase):
     def test_an_operations_manager_cannot_take_a_package_live(self):
         version = make_complete_on_grid(self.manager)
 
-        response = self.client.post(reverse("version-activate", args=[version.id]))
+        response = self.client.post(reverse("version-activate", args=[version.id]), {"revision": version.revision}, content_type=JSON)
 
         self.assertEqual(response.status_code, 403)
         version.refresh_from_db()
@@ -361,7 +361,7 @@ class VersionTests(CatalogueTestCase):
         version = make_complete_on_grid(self.manager)
         self.sign_in("admin")
 
-        response = self.client.post(reverse("version-activate", args=[version.id]))
+        response = self.client.post(reverse("version-activate", args=[version.id]), {"revision": version.revision}, content_type=JSON)
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "active")
@@ -374,7 +374,7 @@ class VersionTests(CatalogueTestCase):
         add_line(version, make_product("PANEL", Category.PANEL), "6")
         self.sign_in("admin")
 
-        response = self.client.post(reverse("version-activate", args=[version.id]))
+        response = self.client.post(reverse("version-activate", args=[version.id]), {"revision": version.revision}, content_type=JSON)
 
         self.assertEqual(response.status_code, 400)
         self.assertGreater(len(response.json()["problems"]), 1)
@@ -447,7 +447,7 @@ class ReviewedVersionImmutabilityTests(CatalogueTestCase):
     def test_the_api_refuses_an_edit_with_a_plain_message(self):
         response = self.client.patch(
             reverse("version-detail", args=[self.version.id]),
-            {"cable_waste_factor": "2.00"},
+            {"revision": self.version.revision, "cable_waste_factor": "2.00"},
             content_type=JSON,
         )
 
@@ -457,7 +457,7 @@ class ReviewedVersionImmutabilityTests(CatalogueTestCase):
     def test_the_api_refuses_a_new_line(self):
         response = self.client.post(
             reverse("line-create", args=[self.version.id]),
-            {"product": make_product("EXTRA").id, "quantity": "1"},
+            {"revision": self.version.revision, "product": make_product("EXTRA").id, "quantity": "1"},
             content_type=JSON,
         )
 
@@ -474,7 +474,7 @@ class DraftEditingTests(CatalogueTestCase):
 
         response = self.client.post(
             reverse("line-create", args=[version.id]),
-            {"product": cable.id, "basis": "cable_route", "quantity": "50"},
+            {"revision": version.revision, "product": cable.id, "basis": "cable_route", "quantity": "50"},
             content_type=JSON,
         )
 
@@ -485,7 +485,7 @@ class DraftEditingTests(CatalogueTestCase):
         version = make_complete_on_grid(self.manager)
         line = version.lines.first()
 
-        response = self.client.delete(reverse("line-detail", args=[line.id]))
+        response = self.client.delete(reverse("line-detail", args=[line.id]), {"revision": version.revision}, content_type=JSON)
 
         self.assertEqual(response.status_code, 204)
 
@@ -532,7 +532,7 @@ class SimultaneousReviewTests(TransactionTestCase):
             client.login(username="admin", password=PASSWORD)
             barrier.wait()
             codes.append(
-                client.post(reverse("version-activate", args=[version.id])).status_code
+                client.post(reverse("version-activate", args=[version.id]), {"revision": version.revision}, content_type=JSON).status_code
             )
             connections.close_all()
 
@@ -542,4 +542,4 @@ class SimultaneousReviewTests(TransactionTestCase):
         for thread in threads:
             thread.join()
 
-        self.assertEqual(sorted(codes), [200, 400])
+        self.assertEqual(sorted(codes), [200, 409])

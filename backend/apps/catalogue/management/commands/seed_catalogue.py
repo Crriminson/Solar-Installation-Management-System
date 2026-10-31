@@ -1,5 +1,5 @@
 """
-Loads example products and two draft packages for a demo.
+Loads labelled dummy products and unreviewed packages at every supported capacity.
 
 The prices and parts are placeholders, not an engineering bill of
 materials. Both packages stay as unreviewed drafts on purpose: the team
@@ -7,6 +7,8 @@ authors the real ones and the owner reviews them (D028).
 
     manage.py seed_catalogue
 """
+
+from decimal import Decimal, ROUND_CEILING
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
@@ -70,7 +72,7 @@ OFF_GRID_LINES = [
 
 
 class Command(BaseCommand):
-    help = "Loads example products and two draft packages for a demo."
+    help = "Loads labelled dummy products and unreviewed packages at every supported capacity."
 
     @transaction.atomic
     def handle(self, *args, **options):
@@ -78,12 +80,31 @@ class Command(BaseCommand):
         if author is None:
             raise CommandError("Run createsuperuser first.")
 
-        if Product.objects.exists():
-            raise CommandError("The catalogue already has products.")
-
         self._add_products(author)
-        self._add_package(PackageKind.ON_GRID, "On-Grid 3 kW", ON_GRID_LINES, author)
-        self._add_package(PackageKind.OFF_GRID, "Off-Grid 3 kW", OFF_GRID_LINES, author)
+        for capacity in range(1, 6):
+            for kind, lines in ((PackageKind.ON_GRID, ON_GRID_LINES), (PackageKind.OFF_GRID, OFF_GRID_LINES)):
+                inverter_sku = f"DEMO-INV-{capacity}K-{kind}"
+                inverter, created = Product.objects.get_or_create(
+                    sku=inverter_sku, defaults={
+                        "name": f"DUMMY {capacity} kW {kind} inverter — owner review required",
+                        "category": Category.INVERTER, "tracking_method": TrackingMethod.SERIALIZED,
+                        "unit": "piece", "rated_power_w": capacity * 1000,
+                        "gst_rate_percent": GST_PERCENT,
+                    },
+                )
+                if created:
+                    self._add_price(inverter, str(capacity * 10000), str(capacity * 8000), author)
+                panel_count = str((Decimal(capacity * 1000) / Decimal("540")).to_integral_value(rounding=ROUND_CEILING))
+                sized_lines = [
+                    (inverter_sku if sku.startswith("INV-") else sku,
+                     panel_count if sku == "PNL-540" else quantity, basis)
+                    for sku, quantity, basis in lines
+                ]
+                self._add_package(kind, f"DUMMY {kind} {capacity} kW — review required", sized_lines, author, capacity)
+        self._add_package(PackageKind.PANEL_SET, "DUMMY Solar Panel Set — review required",
+                          [("PNL-540", "1", QuantityBasis.FIXED)], author)
+        self._add_package(PackageKind.INSTALLATION, "DUMMY Installation service — review required",
+                          [("SVC-INSTALL", "1", QuantityBasis.FIXED)], author)
 
         self.stdout.write(self.style.SUCCESS("Example catalogue loaded."))
 
@@ -98,20 +119,21 @@ class Command(BaseCommand):
             elif tracking == TrackingMethod.SERIALIZED:
                 policy = equipment_policy
 
-            product = Product.objects.create(
-                sku=sku, name=name, category=category, tracking_method=tracking,
-                unit=unit, gst_rate_percent=GST_PERCENT, warranty_policy=policy,
-                **extra,
-            )
-            self._add_price(product, price, cost, author)
+            product, created = Product.objects.get_or_create(sku=sku, defaults={
+                "name": f"DUMMY {name}", "description": "Demonstration data; prices and compatibility require review.",
+                "category": category, "tracking_method": tracking, "unit": unit,
+                "gst_rate_percent": GST_PERCENT, "warranty_policy": policy, **extra,
+            })
+            if created:
+                self._add_price(product, price, cost, author)
 
         for sku, name, unit, price in SERVICES:
-            product = Product.objects.create(
-                sku=sku, name=name, category=Category.SERVICE, unit=unit,
-                tracking_method=TrackingMethod.SERVICE,
-                gst_rate_percent=GST_SERVICE_PERCENT,
-            )
-            self._add_price(product, price, None, author)
+            product, created = Product.objects.get_or_create(sku=sku, defaults={
+                "name": f"DUMMY {name}", "category": Category.SERVICE, "unit": unit,
+                "tracking_method": TrackingMethod.SERVICE, "gst_rate_percent": GST_SERVICE_PERCENT,
+            })
+            if created:
+                self._add_price(product, price, None, author)
 
     def _add_price(self, product, price, cost, author):
         ProductPrice.objects.create(
@@ -120,9 +142,15 @@ class Command(BaseCommand):
             created_by=author,
         )
 
-    def _add_package(self, kind, name, lines, author):
-        template = PackageTemplate.objects.create(kind=kind, capacity_kw="3.00", name=name)
+    def _add_package(self, kind, name, lines, author, capacity=None):
+        template, created = PackageTemplate.objects.get_or_create(
+            kind=kind, capacity_kw=capacity, defaults={"name": name},
+        )
+        if not created:
+            return
         version = template.start_new_version(author)
+        version.notes = "DUMMY reference bill of materials. Not reviewed for electrical compatibility or real pricing."
+        version.save()
 
         if kind == PackageKind.OFF_GRID:
             version.battery_depth_of_discharge = DEMO_DEPTH_OF_DISCHARGE

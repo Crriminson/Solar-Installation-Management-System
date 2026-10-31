@@ -19,15 +19,19 @@ version, so the same rule applies however a change is triggered.
 """
 
 from django.core.exceptions import ValidationError
+from django.db import transaction, IntegrityError
+from django.db.models import F
 from django.db.models import Prefetch, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import ValidationError as ApiValidationError
 
 from .models import PackageLine, PackageTemplate, PackageVersion, Product, WarrantyPolicy
 from .permissions import CatalogueWriteAccess, can_review_packages
+from apps.core.api import ActiveStaff, check_revision
 from .serializers import (
     PackageLineSerializer,
     PackageTemplateDetailSerializer,
@@ -99,6 +103,15 @@ class ProductDetailView(generics.RetrieveUpdateAPIView):
     queryset = products_with_prices()
     http_method_names = ["get", "patch", "head", "options"]
 
+    @transaction.atomic
+    def update(self, request, *args, **kwargs):
+        product = get_object_or_404(Product.objects.select_for_update(), pk=kwargs["pk"])
+        check_revision(product, request.data)
+        serializer = self.get_serializer(product, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(revision=product.revision + 1)
+        return Response(serializer.data)
+
 
 class ProductPriceCreateView(generics.CreateAPIView):
     """Adds a price. Existing prices are never edited."""
@@ -111,9 +124,13 @@ class ProductPriceCreateView(generics.CreateAPIView):
         context["product"] = get_object_or_404(Product, pk=self.kwargs["pk"])
         return context
 
+    @transaction.atomic
     def perform_create(self, serializer):
+        product = Product.objects.select_for_update().get(pk=self.kwargs["pk"])
+        if product.prices.filter(effective_from=serializer.validated_data["effective_from"]).exists():
+            raise ApiValidationError({"effective_from": ["This product already has a price from that date."]})
         serializer.save(
-            product=serializer.context["product"], created_by=self.request.user
+            product=product, created_by=self.request.user
         )
 
 
@@ -121,7 +138,7 @@ class WarrantyPolicyListView(generics.ListAPIView):
     """Short, fixed list for a picker, so it is not paginated."""
 
     serializer_class = WarrantyPolicySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ActiveStaff]
     queryset = WarrantyPolicy.objects.all()
     pagination_class = None
 
@@ -138,7 +155,7 @@ class PackageListCreateView(generics.ListCreateAPIView):
 
 class PackageDetailView(generics.RetrieveAPIView):
     serializer_class = PackageTemplateDetailSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ActiveStaff]
 
     def get_queryset(self):
         lines = PackageLine.objects.select_related("product")
@@ -177,9 +194,14 @@ class VersionDetailView(generics.UpdateAPIView):
     queryset = PackageVersion.objects.all()
     http_method_names = ["patch", "options"]
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         try:
-            return super().update(request, *args, **kwargs)
+            version = lock_version(kwargs["pk"], request.data)
+            serializer = self.get_serializer(version, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save(revision=version.revision + 1)
+            return Response(serializer.data)
         except ValidationError as exc:
             return refused(exc)
 
@@ -188,14 +210,20 @@ class LineCreateView(generics.CreateAPIView):
     serializer_class = PackageLineSerializer
     permission_classes = [CatalogueWriteAccess]
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         try:
-            return super().create(request, *args, **kwargs)
+            version = lock_version(kwargs["pk"], request.data)
+            response = super().create(request, *args, **kwargs)
+            PackageVersion.objects.filter(pk=version.pk).update(revision=F("revision") + 1)
+            return response
         except ValidationError as exc:
             return refused(exc)
 
     def perform_create(self, serializer):
         version = get_object_or_404(PackageVersion, pk=self.kwargs["pk"])
+        if version.lines.filter(product=serializer.validated_data["product"]).exists():
+            raise ApiValidationError({"product": ["This product is already on the package version."]})
         serializer.save(version=version)
 
 
@@ -205,15 +233,25 @@ class LineDetailView(generics.UpdateAPIView, generics.DestroyAPIView):
     queryset = PackageLine.objects.select_related("product")
     http_method_names = ["patch", "delete", "options"]
 
+    @transaction.atomic
     def update(self, request, *args, **kwargs):
         try:
-            return super().update(request, *args, **kwargs)
+            line = self.get_object()
+            version = lock_version(line.version_id, request.data)
+            response = super().update(request, *args, **kwargs)
+            PackageVersion.objects.filter(pk=version.pk).update(revision=F("revision") + 1)
+            return response
         except ValidationError as exc:
             return refused(exc)
 
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
         try:
-            return super().destroy(request, *args, **kwargs)
+            line = self.get_object()
+            version = lock_version(line.version_id, request.data)
+            response = super().destroy(request, *args, **kwargs)
+            PackageVersion.objects.filter(pk=version.pk).update(revision=F("revision") + 1)
+            return response
         except ValidationError as exc:
             return refused(exc)
 
@@ -227,8 +265,9 @@ class VersionActivateView(APIView):
     fixed in one go.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ActiveStaff]
 
+    @transaction.atomic
     def post(self, request, pk):
         if not can_review_packages(request.user):
             return Response(
@@ -236,11 +275,22 @@ class VersionActivateView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        version = get_object_or_404(PackageVersion, pk=pk)
+        version = lock_version(pk, request.data)
 
         try:
             version.activate(request.user)
+            PackageVersion.objects.filter(pk=pk).update(revision=F("revision") + 1)
+            version.refresh_from_db()
         except ValidationError as exc:
             return refused(exc)
 
         return Response(PackageVersionSerializer(version).data)
+
+
+def lock_version(pk, data):
+    """Use activation's template-first lock order for edits and line writes too."""
+    version = get_object_or_404(PackageVersion, pk=pk)
+    PackageTemplate.objects.select_for_update().get(pk=version.template_id)
+    version = PackageVersion.objects.select_for_update().get(pk=pk)
+    check_revision(version, data)
+    return version

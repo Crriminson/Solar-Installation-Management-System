@@ -153,7 +153,7 @@ function ReviewAction({
   const [confirming, setConfirming] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => activateVersion(version.id),
+    mutationFn: () => activateVersion(version.id, version.revision),
     onSuccess: () => {
       setConfirming(false);
       queryClient.invalidateQueries({ queryKey: ["packages"] });
@@ -211,7 +211,7 @@ function VersionDetail({ version }: { version: PackageVersion }) {
     { header: "Quantity", render: (line) => describeQuantity(line) },
   ];
   if (canEdit) {
-    columns.push({ header: "", render: (line) => <RemoveLine line={line} /> });
+    columns.push({ header: "", render: (line) => <RemoveLine line={line} revision={version.revision} /> });
   }
 
   return (
@@ -270,15 +270,17 @@ function SizingForm({ version }: { version: PackageVersion }) {
   const [waste, setWaste] = useState(version.cable_waste_factor);
   const [buffer, setBuffer] = useState(version.cable_termination_buffer_m);
   const [depth, setDepth] = useState(version.battery_depth_of_discharge ?? "");
+  const [revision, setRevision] = useState(version.revision);
 
   const mutation = useMutation({
     mutationFn: () =>
       updateVersion(version.id, {
+        revision,
         cable_waste_factor: waste,
         cable_termination_buffer_m: buffer,
         battery_depth_of_discharge: depth || null,
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["packages"] }),
+    onSuccess: (updated) => { setRevision(updated.revision); queryClient.invalidateQueries({ queryKey: ["packages"] }); },
   });
 
   const errors = fieldErrorsFrom(mutation.error);
@@ -338,6 +340,7 @@ function AddLineForm({ version }: { version: PackageVersion }) {
   const mutation = useMutation({
     mutationFn: () =>
       addLine(version.id, {
+        revision: version.revision,
         product: Number(product),
         basis,
         quantity: isFixed ? quantity : null,
@@ -405,11 +408,11 @@ function AddLineForm({ version }: { version: PackageVersion }) {
   );
 }
 
-function RemoveLine({ line }: { line: PackageLine }) {
+function RemoveLine({ line, revision }: { line: PackageLine; revision: number }) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: () => removeLine(line.id),
+    mutationFn: () => removeLine(line.id, revision),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["packages"] }),
   });
 

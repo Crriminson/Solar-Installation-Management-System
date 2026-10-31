@@ -9,6 +9,7 @@ export interface ProductPrice {
 }
 
 export interface Product {
+  revision: number;
   id: number;
   sku: string;
   name: string;
@@ -49,6 +50,7 @@ export interface PackageLine {
 }
 
 export interface PackageVersion {
+  revision: number;
   id: number;
   version_number: number;
   status: "draft" | "active" | "retired";

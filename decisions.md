@@ -71,6 +71,7 @@ Not done:
 | D040 | Taking a package version live needs an Administrator | Confirmed | Implements the owner review in D028. Operations managers maintain packages but cannot activate them |
 | D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
 | D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
+| D042 | Dummy component packages may be authored for development at all required capacities | Confirmed | Owner, 2026-10-31: "you can create dummies or find some samples online". They remain clearly labelled, unreviewed and inactive until explicit administrator review; no claim of electrical compatibility |
 
 ## 3. Resolved decisions and their consequences
 
@@ -147,7 +148,7 @@ Corroborating official sources for central, Delhi and UP:
 | F01 | Customers, sites, enquiries | Verified | Phone and normalized-address duplicate flags; explicit review with reason; both records retained. Billing-period and non-negative input validation; private bill downloads; tested role restrictions. Completion tests plus browser enquiry flow |
 | F02 | Qualification and follow-up | Verified | Backend owner/due-date rules, five qualification confirmations and outcome reason, audit timeline, stale-edit rejection and preserved form input. Assignment → Contacting → Qualified verified in browser; success, failure and role tests pass |
 | F03 | Survey and approval | Verified | Operations assignment and technician record scoping; Changes Requested now corrects and resubmits the same revision per spec. Prior submissions and corrections retained in audit snapshots. Approved revisions stay immutable. Browser correction/resubmission/approval and concurrency/permission tests pass |
-| F04 | Catalogue and packages | In Progress | Products, dated prices, versioned packages, review gate and sizing tested, with screens verified in a browser run. Open: the real reference bills of materials and their owner review (D028). seed_catalogue only loads labelled placeholders |
+| F04 | Catalogue and packages | Implemented | Repeat-safe seed creates 12 labelled dummy packages: on/off-grid 1–5 kW, panel set and installation. No automatic activation. Prices and quantities validated with database constraints; product/package stale writes rejected. Software tests pass; production bills of materials still require owner review (D028/D042) |
 | F05 | Generated quotations | Not Started | Review gate set (D028) |
 | F06 | Acceptance and signatures | Not Started | — |
 | F07 | Orders, payments, invoices | Not Started | Terms set (D024) |

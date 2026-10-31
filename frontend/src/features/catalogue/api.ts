@@ -87,17 +87,17 @@ export function updateVersion(versionId: number, values: Record<string, unknown>
   return apiPatch<PackageVersion>(`catalogue/versions/${versionId}/`, values);
 }
 
-export function activateVersion(versionId: number) {
-  return apiPost<PackageVersion>(`catalogue/versions/${versionId}/activate/`);
+export function activateVersion(versionId: number, revision: number) {
+  return apiPost<PackageVersion>(`catalogue/versions/${versionId}/activate/`, { revision });
 }
 
 export function addLine(
   versionId: number,
-  values: { product: number; basis: string; quantity: string | null; notes: string },
+  values: { product: number; basis: string; quantity: string | null; notes: string; revision: number },
 ) {
   return apiPost<PackageLine>(`catalogue/versions/${versionId}/lines/`, values);
 }
 
-export function removeLine(lineId: number) {
-  return apiRequest<void>(`catalogue/lines/${lineId}/`, { method: "DELETE" });
+export function removeLine(lineId: number, revision: number) {
+  return apiRequest<void>(`catalogue/lines/${lineId}/`, { method: "DELETE", body: JSON.stringify({ revision }) });
 }

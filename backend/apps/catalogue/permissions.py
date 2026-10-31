@@ -36,6 +36,6 @@ class CatalogueWriteAccess(BasePermission):
     message = "Only an operations manager may change the catalogue."
 
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
+        if not request.user.is_authenticated or not request.user.is_active_staff:
             return False
         return request.method in SAFE_METHODS or can_manage_catalogue(request.user)
