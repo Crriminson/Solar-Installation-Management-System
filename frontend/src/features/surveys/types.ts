@@ -5,7 +5,8 @@ export type RevisionStatus =
   | "submitted"
   | "changes_requested"
   | "approved"
-  | "rejected";
+  | "rejected"
+  | "superseded";
 
 export type ReviewDecision = "approved" | "changes_requested" | "rejected";
 

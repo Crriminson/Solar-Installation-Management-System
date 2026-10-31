@@ -119,6 +119,11 @@ export default function SurveyRecord() {
 function PrimaryAction({ survey }: { survey: Survey }) {
   const latest = survey.revisions[0];
 
+  // Secondary: an approved survey usually needs nothing more.
+  if (latest?.status === "approved") {
+    return <ButtonLink to={`/surveys/${survey.id}/new`}>Record new revision</ButtonLink>;
+  }
+
   if (!latest || latest.status === "changes_requested" || latest.status === "rejected") {
     return (
       <ButtonLink to={`/surveys/${survey.id}/new`} variant="primary">
@@ -238,6 +243,13 @@ function ReviewPanel({ revision, survey }: { revision: SurveyRevision; survey: S
           }}
         >
           {DECISIONS[decision].effect}
+          {decision === "approved" && survey.is_approved && (
+            <>
+              {" "}
+              It replaces the revision approved now, and any quotation built on
+              that one must be reviewed.
+            </>
+          )}
         </ConfirmDialog>
       )}
     </section>
@@ -444,8 +456,10 @@ const HISTORY_COLUMNS: readonly Column<SurveyRevision>[] = [
   { header: "Review notes", render: (revision) => revision.review_notes || "–" },
 ];
 
-/* Changes Requested and Rejected end a revision at the review step. */
+/* Where a revision sits on the path, including the ways one can end. */
 function pathStage(revision: SurveyRevision) {
+  if (revision.status === "superseded") return "approved";
+
   return revision.status === "changes_requested" || revision.status === "rejected"
     ? "submitted"
     : revision.status;

@@ -37,6 +37,7 @@ export const REVISION_STATUSES: Record<string, StatusInfo> = {
   changes_requested: { label: "Changes requested", tone: "blocked" },
   approved: { label: "Approved", tone: "done" },
   rejected: { label: "Rejected", tone: "closed" },
+  superseded: { label: "Superseded", tone: "closed" },
 };
 
 /* A survey opened but with nothing recorded yet. */

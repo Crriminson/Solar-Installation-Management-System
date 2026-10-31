@@ -39,6 +39,7 @@ class RevisionStatus(models.TextChoices):
     CHANGES_REQUESTED = "changes_requested", "Changes requested"
     APPROVED = "approved", "Approved"
     REJECTED = "rejected", "Rejected"
+    SUPERSEDED = "superseded", "Superseded"
 
 
 # Which statuses may follow which. A revision cannot be approved
@@ -53,8 +54,11 @@ ALLOWED_REVISION_CHANGES = {
     # Changes requested is terminal for this revision. The technician
     # makes a new one rather than editing a reviewed record.
     RevisionStatus.CHANGES_REQUESTED: [],
-    RevisionStatus.APPROVED: [],
+    # An approval ends only when a newer revision is approved. Until then
+    # it stays in force, so a quotation always has one source.
+    RevisionStatus.APPROVED: [RevisionStatus.SUPERSEDED],
     RevisionStatus.REJECTED: [],
+    RevisionStatus.SUPERSEDED: [],
 }
 
 # A revision nobody can edit any more.
@@ -63,6 +67,7 @@ LOCKED_STATUSES = [
     RevisionStatus.CHANGES_REQUESTED,
     RevisionStatus.APPROVED,
     RevisionStatus.REJECTED,
+    RevisionStatus.SUPERSEDED,
 ]
 
 # The only columns the review flow may write once a revision is locked.
@@ -340,7 +345,17 @@ class SurveyRevision(models.Model):
         The same applies to sending one back or rejecting it, which are
         the other half of the same decision. Both of those always carry
         a reason.
+
+        Runs with the survey locked, so two approvals at once cannot
+        both see the old revision as the one to replace. The status is
+        reread under that lock, because this copy may be out of date.
         """
+        with transaction.atomic():
+            Survey.objects.select_for_update().get(pk=self.survey_id)
+            self.refresh_from_db(fields=["status"])
+            self._record_decision(decision, reviewer, notes)
+
+    def _record_decision(self, decision, reviewer, notes):
         self._require_transition(decision)
 
         if not can_approve_surveys(reviewer):
@@ -353,6 +368,9 @@ class SurveyRevision(models.Model):
                 "Say what is wrong when asking for changes or rejecting."
             )
 
+        if decision == RevisionStatus.APPROVED:
+            self._supersede_current_approval()
+
         self.status = decision
         self.reviewed_by = reviewer
         self.reviewed_at = timezone.now()
@@ -360,6 +378,13 @@ class SurveyRevision(models.Model):
         self.save(
             update_fields=["status", "reviewed_by", "reviewed_at", "review_notes"]
         )
+
+    def _supersede_current_approval(self):
+        """Ends the approval this revision replaces, if there is one."""
+        current = self.survey.revisions.filter(status=RevisionStatus.APPROVED).first()
+        if current:
+            current.status = RevisionStatus.SUPERSEDED
+            current.save(update_fields=["status"])
 
     def _require_transition(self, target):
         if target not in ALLOWED_REVISION_CHANGES.get(self.status, []):

@@ -66,6 +66,7 @@ Not done:
 | D035 | Staff sign in through the app, with session, login and logout endpoints | Confirmed | Sessions are the spec.md section 3 baseline. Staff previously signed in through Django admin |
 | D036 | A Django superuser holds every role | Confirmed | The first account on a new install must be able to use the app |
 | D037 | Survey review, not only approval, is limited to operations managers and administrators | Confirmed | Sending back and rejecting are the same decision as approving. rules.md section 4 |
+| D038 | An approved survey revision becomes Superseded when a newer one is approved | Confirmed | Builder decision 2026-10-31. spec.md F03 requires revising an approved survey. The approval stands until replaced, so a quotation always has one source |
 
 ## 3. Resolved decisions and their consequences
 
@@ -141,7 +142,7 @@ Corroborating official sources for central, Delhi and UP:
 |---|---|---|---|
 | F01 | Customers, sites, enquiries | In Progress | 112 backend tests and a 38-step browser run pass: public form with bill upload, staff entry with source, upload checks by file contents. Open: duplicate check matches phone only, and no screen resolves a duplicate flag |
 | F02 | Qualification and follow-up | In Progress | Queue, panel, owner assignment and My Work verified in the browser run. Open: qualification checks, audit entries, stale-edit rejection. A due date is required on screen only |
-| F03 | Survey and approval | In Progress | Capture, photos, review and revision history verified in the browser run. Locked revisions checked against the stored status; one approved revision enforced by a partial unique index. Open: an approved survey cannot yet be revised. Changes Requested ends a revision and a new one is filed, which differs from the spec's Changes Requested → Submitted and needs owner sign-off |
+| F03 | Survey and approval | In Progress | Capture, photos, review and revision history verified in the browser run. Locked revisions checked against the stored status; one approved revision enforced by a partial unique index. Approved surveys can be revised (D038). Open: Changes Requested ends a revision and a new one is filed, which differs from the spec's Changes Requested → Submitted and needs owner sign-off |
 | F04 | Catalogue and packages | Not Started | Defaults set (D027, D028) |
 | F05 | Generated quotations | Not Started | Review gate set (D028) |
 | F06 | Acceptance and signatures | Not Started | — |
@@ -165,6 +166,7 @@ Corroborating official sources for central, Delhi and UP:
 | # | Change | Instruction | Affects |
 |---|---|---|---|
 | 1 | PostgreSQL 17 → 16 | Owner, 2026-10-31 | spec.md §3 table. No requirement changes; 16.13 already running, no 17-only feature used |
+| 2 | Superseded added to the survey revision states | AtharvK-28, 2026-10-31 | F03 states. Needed to meet F03's rule that later changes create a new revision (D038) |
 
 Each entry records: the owner's instruction, previous behaviour, new
 behaviour, affected requirement IDs, and the date.

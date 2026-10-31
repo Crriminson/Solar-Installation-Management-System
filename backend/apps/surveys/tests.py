@@ -227,17 +227,61 @@ class ReviewFlowTests(TestCase):
         self.revision.refresh_from_db()
         self.assertEqual(self.revision.status, RevisionStatus.CHANGES_REQUESTED)
 
-    def test_a_survey_cannot_have_two_approved_revisions(self):
-        """A quotation must never have two sources to choose between."""
+    def approve_first_then_add_second(self):
         self.revision.submit()
         self.revision.review(RevisionStatus.APPROVED, reviewer=self.manager)
-
-        second = make_revision(self.survey, self.technician)
+        second = make_revision(self.survey, self.technician, cable_distance_m="31.00")
         second.submit()
+        return second
 
-        with self.assertRaises((IntegrityError, ValidationError)):
+    def test_the_database_refuses_two_approved_revisions(self):
+        """A quotation must never have two sources to choose between."""
+        second = self.approve_first_then_add_second()
+
+        with self.assertRaises(IntegrityError):
             with transaction.atomic():
-                second.review(RevisionStatus.APPROVED, reviewer=self.manager)
+                SurveyRevision.objects.filter(pk=second.pk).update(
+                    status=RevisionStatus.APPROVED
+                )
+
+    def test_approving_a_new_revision_supersedes_the_old_one(self):
+        second = self.approve_first_then_add_second()
+
+        second.review(RevisionStatus.APPROVED, reviewer=self.manager)
+
+        self.revision.refresh_from_db()
+        self.assertEqual(self.revision.status, RevisionStatus.SUPERSEDED)
+        self.assertEqual(self.survey.approved_revision, second)
+
+    def test_an_approval_stands_until_a_newer_one_replaces_it(self):
+        """A revision in progress must not leave quotations with no source."""
+        self.approve_first_then_add_second()
+
+        self.assertEqual(self.survey.approved_revision, self.revision)
+
+    def test_rejecting_a_new_revision_leaves_the_approval_in_place(self):
+        second = self.approve_first_then_add_second()
+
+        second.review(RevisionStatus.REJECTED, reviewer=self.manager, notes="No")
+
+        self.assertEqual(self.survey.approved_revision, self.revision)
+
+    def test_a_superseded_revision_stays_frozen(self):
+        second = self.approve_first_then_add_second()
+        second.review(RevisionStatus.APPROVED, reviewer=self.manager)
+
+        old = SurveyRevision.objects.get(pk=self.revision.pk)
+        old.cable_distance_m = "99.00"
+
+        with self.assertRaises(ValidationError):
+            old.save()
+
+    def test_a_superseded_revision_cannot_be_approved_again(self):
+        second = self.approve_first_then_add_second()
+        second.review(RevisionStatus.APPROVED, reviewer=self.manager)
+
+        with self.assertRaises(ValidationError):
+            self.revision.review(RevisionStatus.APPROVED, reviewer=self.manager)
 
 
 class MeasurementRuleTests(TestCase):

@@ -131,8 +131,21 @@ class StartSurveyTests(SurveyApiTestCase):
 
 
 class ReviewApiTests(SurveyApiTestCase):
-    def test_a_second_approval_gets_a_plain_message(self):
-        """The database refuses it. The caller should not read its error."""
+    def test_an_approved_survey_can_take_a_new_revision(self):
+        """Spec.md F03: later changes create a new revision."""
+        first = make_revision(self.survey, self.technician)
+        first.submit()
+        first.review(RevisionStatus.APPROVED, reviewer=self.manager)
+
+        response = self.client.post(
+            reverse("revision-create", args=[self.survey.id]),
+            revision_body(),
+            content_type=JSON,
+        )
+
+        self.assertEqual(response.status_code, 201)
+
+    def test_approving_through_the_api_replaces_the_earlier_approval(self):
         first = make_revision(self.survey, self.technician)
         first.submit()
         first.review(RevisionStatus.APPROVED, reviewer=self.manager)
@@ -146,8 +159,9 @@ class ReviewApiTests(SurveyApiTestCase):
             content_type=JSON,
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertNotIn("constraint", response.json()["detail"])
+        self.assertEqual(response.status_code, 200)
+        first.refresh_from_db()
+        self.assertEqual(first.status, RevisionStatus.SUPERSEDED)
 
     def test_a_technician_cannot_reject_through_the_api(self):
         revision = make_revision(self.survey, self.technician)
@@ -259,6 +273,47 @@ class SurveyPhotoTests(SurveyApiTestCase):
 
         self.assertEqual(signed_in.status_code, 200)
         self.assertIn(signed_out.status_code, [401, 403])
+
+
+class SimultaneousApprovalTests(TransactionTestCase):
+    def test_two_approvals_at_once_leave_exactly_one_approved(self):
+        """The survey row lock makes one approval wait for the other."""
+        technician = User.objects.create_user("tech", password=PASSWORD)
+        User.objects.create_user(
+            "mgr", password=PASSWORD, roles=[Role.OPERATIONS_MANAGER]
+        )
+        survey = Survey.objects.create(enquiry=make_enquiry())
+
+        revisions = [make_revision(survey, technician) for _ in range(2)]
+        for revision in revisions:
+            revision.submit()
+
+        barrier = threading.Barrier(len(revisions))
+        codes = []
+
+        def approve(revision):
+            client = Client(raise_request_exception=False)
+            client.login(username="mgr", password=PASSWORD)
+            barrier.wait()
+            response = client.post(
+                reverse("revision-review", args=[revision.id]),
+                {"decision": "approved"},
+                content_type=JSON,
+            )
+            codes.append(response.status_code)
+            connections.close_all()
+
+        threads = [
+            threading.Thread(target=approve, args=[revision]) for revision in revisions
+        ]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+
+        self.assertEqual(codes, [200, 200])
+        statuses = sorted(survey.revisions.values_list("status", flat=True))
+        self.assertEqual(statuses, [RevisionStatus.APPROVED, RevisionStatus.SUPERSEDED])
 
 
 class RevisionNumberingConcurrencyTests(TransactionTestCase):

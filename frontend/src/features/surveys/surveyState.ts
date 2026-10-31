@@ -14,7 +14,13 @@ export function latestStatus(survey: Survey): StatusInfo {
 
 /* Who holds this survey now. */
 export function waitingOn(survey: Survey) {
-  switch (survey.revisions[0]?.status) {
+  // A new revision of an approved survey changes nothing until approved.
+  const latest = survey.revisions[0];
+  if (survey.is_approved && latest?.status !== "approved") {
+    return "The approved revision stays in use until this one is approved";
+  }
+
+  switch (latest?.status) {
     case "draft":
       return "Waiting on the technician to submit it";
     case "submitted":

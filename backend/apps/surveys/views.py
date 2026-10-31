@@ -16,7 +16,6 @@ change is triggered.
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import IntegrityError
 from django.db.models import Prefetch, Q
 from django.http import FileResponse, Http404
 from rest_framework import generics, status
@@ -135,7 +134,8 @@ class RevisionCreateView(APIView):
 
     This is also how a technician answers a request for changes: the
     bounced revision stays as it was, and the corrected measurements
-    become revision n+1.
+    become revision n+1. An approved survey can be revised the same way.
+    Its approval stands until the new revision is approved in turn.
     """
 
     permission_classes = [IsAuthenticated]
@@ -144,12 +144,6 @@ class RevisionCreateView(APIView):
         survey = Survey.objects.filter(pk=pk).first()
         if survey is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
-
-        if survey.is_approved:
-            return Response(
-                {"detail": "This survey is already approved."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
         serializer = RevisionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -219,13 +213,6 @@ class RevisionReviewView(APIView):
         except ValidationError as exc:
             return Response(
                 {"detail": _describe(exc)}, status=status.HTTP_400_BAD_REQUEST
-            )
-        except IntegrityError:
-            # The partial unique index refused a second approved
-            # revision. Say so plainly rather than echo the database.
-            return Response(
-                {"detail": "Another revision of this survey is already approved."},
-                status=status.HTTP_400_BAD_REQUEST,
             )
 
         return Response(SurveyRevisionSerializer(revision).data)
