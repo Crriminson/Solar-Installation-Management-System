@@ -334,8 +334,11 @@ instruction and recorded in `decisions.md`.
   are already the right four for each role. A bar that tries to hold all
   fifteen items — what an administrator sees — cannot be hit with a thumb.
 - **Three shells**: `AppShell` (staff), `BrandShell` (public enquiry form and
-  login, with the array pattern), and the restricted customer view used for
-  signing, which carries no navigation at all.
+  login, with the array pattern), and `PresentShell` for the screens the
+  customer is handed the device on. `PresentShell` keeps the product mark, so
+  the person signing can see whose document it is, and carries no navigation
+  and no route back into the app. The signing routes sit behind
+  `RequireStaff chrome={false}`: still signed in, no staff chrome.
 
 ### 5.2 Information architecture
 
@@ -468,6 +471,10 @@ is ever shown or requested for a length of cable. The manual fallback is
 visible only to users with the permission, requires a reason, and says on
 screen that it is written to the audit log.
 
+Scan results and the action that finishes a field task are the two things
+that must never be missed: the first announces through a live region, the
+second sticks to the bottom of the screen rather than scrolling away.
+
 **Signature (F06, F11).** Canvas with Pointer Events, so finger, stylus and
 mouse all work. Clear is available; the customer's typed name and an explicit
 acceptance are required before Accept enables. The label beside every pad:
@@ -590,6 +597,8 @@ In `frontend/src/components/`, each with its own `.module.css`.
 |---|---|
 | `AppShell` | Sidebar, rail, header, breadcrumbs, account menu, phone bar and More sheet |
 | `BrandShell`, `BrandMark` | The ink panel for public pages; the mark and product name |
+| `PresentShell` | The restricted customer view for signing: mark, document, nothing else (F06) |
+| `Toast`, `ToastContext` | Brief confirmation of a completed action. Success only |
 | `PageHeader` | Title, status, subtitle, back link, actions |
 | `DataTable` | Columns, rows, row click, selection. Sticky head; stacked cards on a phone. Never sorts or paginates client-side |
 | `Pagination` | Page numbers with a total count |
