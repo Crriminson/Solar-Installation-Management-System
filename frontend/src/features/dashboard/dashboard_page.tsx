@@ -17,9 +17,10 @@ import FilterTabs from "../../components/FilterTabs";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ArrowRightIcon, ICON_SIZE, PdfIcon } from "../../design/icons";
 import { businessToday, formatDate, formatMoney } from "../../lib/format";
 import { fetchDashboard, summaryPdfUrl, type MetricCard, type MetricRow } from "./api";
-import { formatFigure } from "./figures";
+import { formatFigure, MONEY_FIGURES } from "./figures";
 import { dashboardQuery, PERIODS, PROJECT_STATUSES, SYSTEM_TYPES } from "./filters";
 import styles from "./dashboard.module.css";
 
@@ -65,7 +66,11 @@ export default function DashboardPage() {
   return <>
     <PageHeader title="Director dashboard"
       subtitle={result.data ? result.data.period.label : "Loading the period…"}
-      actions={<ButtonLink to={summaryPdfUrl(query)} reloadDocument>Summary PDF</ButtonLink>} />
+      actions={
+        <ButtonLink to={summaryPdfUrl(query)} reloadDocument icon={<PdfIcon aria-hidden />}>
+          Summary PDF
+        </ButtonLink>
+      } />
 
     <FilterTabs label="Period" options={PERIODS} value={period}
       onChange={(value) => update("period", value)} />
@@ -105,12 +110,38 @@ export default function DashboardPage() {
   </>;
 }
 
+/*
+  One figure, as a link to the records behind it.
+
+  The four money figures each carry their own look and a tag, so none
+  of them can be read as another (F15). Everything else uses the plain
+  tile.
+*/
 function Tile({ card, query }: { card: MetricCard; query: URLSearchParams }) {
   const suffix = query.toString();
+  const figure = MONEY_FIGURES[card.key];
+  const className = [styles.card, figure && styles[figure.identity]]
+    .filter(Boolean)
+    .join(" ");
 
-  return <Link className={styles.card} to={`/dashboard/${card.key}${suffix ? `?${suffix}` : ""}`}>
-    <span className={styles.value}>{formatFigure(card.value, card.kind)}</span>
-    <span>{card.label}</span>
-    <span className={styles.caption}>{card.caption}</span>
-  </Link>;
+  return (
+    <Link className={className} to={`/dashboard/${card.key}${suffix ? `?${suffix}` : ""}`}>
+      <span className={styles.cardTop}>
+        <span className={styles.label}>{card.label}</span>
+        {figure && <span className={styles.tag}>{figure.tag}</span>}
+      </span>
+
+      <span className={styles.value}>
+        {formatFigure(card.value, card.kind)}
+        {figure && <span className={styles.basis}>{figure.basis}</span>}
+      </span>
+
+      <span className={styles.caption}>{card.caption}</span>
+
+      <span className={styles.drill}>
+        {card.records === 1 ? "1 record" : `${card.records} records`}
+        <ArrowRightIcon size={ICON_SIZE.inline} aria-hidden />
+      </span>
+    </Link>
+  );
 }
