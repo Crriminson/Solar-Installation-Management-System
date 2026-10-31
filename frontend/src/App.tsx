@@ -7,7 +7,7 @@
 
 import { Routes, Route } from "react-router-dom";
 
-import { EmptyMessage } from "./components/StateMessage";
+import NotFound from "./components/NotFound";
 import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
 import PackageList from "./features/catalogue/PackageList";
@@ -99,7 +99,7 @@ export default function App() {
         <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
       </Route>
 
-      <Route path="*" element={<EmptyMessage>This page does not exist.</EmptyMessage>} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
