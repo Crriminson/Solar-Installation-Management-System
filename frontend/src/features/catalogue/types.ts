@@ -33,6 +33,7 @@ export interface Product {
 export interface WarrantyPolicy {
   id: number;
   name: string;
+  version: number;
   duration_months: number;
 }
 

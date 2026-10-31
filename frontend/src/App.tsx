@@ -37,6 +37,8 @@ import JobCreate from "./features/scheduling/job_create";
 import JobRecord from "./features/scheduling/job_record";
 import InstallationForm from "./features/installations/installation_form";
 import InstallationAccept from "./features/installations/installation_accept";
+import WarrantyList from "./features/warranties/warranty_list";
+import WarrantyRecord from "./features/warranties/warranty_record";
 
 export default function App() {
   return (
@@ -65,6 +67,8 @@ export default function App() {
         <Route path="/schedule/:jobId" element={<JobRecord />} />
         <Route path="/installations/:reportId" element={<InstallationForm />} />
         <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
+        <Route path="/warranties" element={<WarrantyList />} />
+        <Route path="/warranties/:warrantyId" element={<WarrantyRecord />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

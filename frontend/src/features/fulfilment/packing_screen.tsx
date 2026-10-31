@@ -27,6 +27,7 @@ import StatusBadge from "../../components/StatusBadge";
 import { formatDateTime, formatQuantity, nowForDateTimeInput,
          dateTimeInputToIso } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
+import { WarrantiesStarted } from "../warranties/order_warranties";
 import { closePacking, dispatchOrder, fetchFulfilment, recordDelivery, reserveStock,
          scanItem } from "./api";
 import { FULFILMENT_STATUSES } from "./status";
@@ -270,6 +271,9 @@ function DeliveryPanel({ fulfilment, onDone }: {
       error={mutation.isError ? describeError(mutation.error) : null}
       onConfirm={() => mutation.mutate()} onCancel={() => setOpen(false)}>
       <div className={styles.form}>
+        <p className={styles.muted}>
+          Every warranty starts from this date, and it cannot be changed afterwards.
+        </p>
         <TextField label="Who took delivery?" required value={recipient}
           onChange={setRecipient} />
         <TextField label="When did it arrive?" type="datetime-local" required
@@ -294,6 +298,7 @@ function DeliveredFacts({ fulfilment }: { fulfilment: Fulfilment }) {
         <><dt>Consignment</dt><dd>{fulfilment.carrier_reference}</dd></>}
       {fulfilment.delivery_notes &&
         <><dt>Notes</dt><dd>{fulfilment.delivery_notes}</dd></>}
+      <WarrantiesStarted orderId={fulfilment.order} />
     </dl>
   </section>;
 }

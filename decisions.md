@@ -79,6 +79,10 @@ Not done:
 | D046 | A cleared receipt allocates itself to the oldest unsettled invoice | Confirmed | Owner rescope 2026-10-31. One advance against one advance invoice needed two steps; making people press a second button teaches them to skip allocation. Manual reallocation remains, under the same caps |
 | D047 | Opening a packing list reserves stock in the same action | Confirmed | Owner rescope 2026-10-31. Pending was a state somebody had to know to leave. The warehouse now meets an order either ready to pack or blocked |
 | D048 | Support ticket states cut from eight to four | Confirmed | Owner rescope 2026-10-31, F13. Triage, scheduling and waiting for a part are facts about a ticket, not stages of it: a visit is an F10 job, and waiting is a block with an owner, as it is for an installation |
+| D049 | A coverage expiry that lands on a date which does not exist moves forward to the 1st of the next month | Confirmed | spec.md F12 requires explicit leap-day behaviour. Expiry is exclusive, so moving back to 28 February would make the 27th the last covered day, one day short of the term sold |
+| D050 | A replacement made after expiry is stored with zero coverage | Confirmed | Follows D020 and D021 together. The claim is honoured and the link kept, but there is nothing left to inherit and no cover is invented |
+| D051 | F12 ships replacement as a tested service; the write action arrives with F13 | Confirmed | Owner approved 2026-10-31. A replacement is always a ticket action, and an endpoint now would let the warranty say a unit was swapped while stock said otherwise |
+| D052 | A delivery cannot predate its order's confirmation | Confirmed | Every warranty starts from this date and cannot be edited. Compared with confirmation, not dispatch: dispatched_at is when dispatch was keyed in, which can fall after a true delivery time |
 
 ## 3. Resolved decisions and their consequences
 
@@ -163,7 +167,7 @@ Corroborating official sources for central, Delhi and UP:
 | F09 | Packing, scanning, dispatch | Implemented | Reservation checks before it claims, so a shortage blocks without stranding stock. Scan rejects wrong product, another order's unit, an already-dispatched asset and a repeat. Delivery is what makes the balance due |
 | F10 | Scheduling and installation | Implemented | Overlapping assignments rejected with the technician's row locked; reschedule keeps the previous slot and its reason; a technician sees only their own jobs, on a thinner payload |
 | F11 | Installation evidence | Implemented | Submission refused while evidence is missing; acceptance must quote the revision shown; refusal is a recorded outcome that sends the job back, not an error |
-| F12 | Warranties | Not Started | — |
+| F12 | Warranties | Verified | Delivery issues one warranty per serialized unit in its own transaction, with the policy copied and the row uneditable. Leap day, Kolkata start date, snapshot, inheritance and replacement after expiry tested; concurrent deliveries and replacements tested on real threads. 386 backend tests pass on PostgreSQL 16; 15 of 15 deliberately broken rules caught; browser delivery, serial lookup, role refusal and replacement history checked at desktop and phone width. Replacement is a service until F13 calls it (D051). See f12-warranties.md |
 | F13 | Support and replacements | Not Started | — |
 | F14 | Costs and finance | Not Started | Scope set (D025) |
 | F15 | Dashboard and exports | Not Started | — |

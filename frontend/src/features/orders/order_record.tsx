@@ -21,6 +21,7 @@ import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
+import OrderWarrantiesSection from "../warranties/order_warranties";
 import { allocatePayment, cancelOrder, clearPayment, fetchOrder, issueBalanceInvoice,
          recordPayment, reversePayment } from "./api";
 import { INVOICE_KINDS, ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from "./status";
@@ -58,6 +59,7 @@ function OrderDetails({ order }: { order: Order }) {
 
   const hasBalanceInvoice = order.invoices.some((invoice) => invoice.kind === "balance");
   const open = order.status === "confirmed";
+  const delivered = order.status === "delivered" || order.status === "completed";
 
   const invoiceColumns: readonly Column<Invoice>[] = [
     { header: "Invoice", render: (invoice) => <Reference>{invoice.reference}</Reference> },
@@ -114,6 +116,8 @@ function OrderDetails({ order }: { order: Order }) {
     </section>
 
     <PaymentSection order={order} canTakeMoney={canTakeMoney} onChanged={refresh} />
+
+    {delivered && <OrderWarrantiesSection orderId={order.id} />}
 
     {open && <div className={styles.actions}>
       <Button onClick={() => setCancelling(true)}>Cancel order</Button>
