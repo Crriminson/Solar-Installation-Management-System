@@ -20,7 +20,9 @@ export interface NavSection {
 export const NAV_SECTIONS: readonly NavSection[] = [
   {
     title: "",
-    items: [{ label: "My work", to: "/work", roles: [] }],
+    items: [
+      { label: "My work", to: "/work", roles: [] },
+    ],
   },
   {
     title: "Sales",
@@ -76,6 +78,11 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   {
     title: "Support",
     items: [
+      {
+        label: "Tickets",
+        to: "/tickets",
+        roles: ["support", "operations_manager", "technician", "finance", "director"],
+      },
       {
         label: "Warranties",
         to: "/warranties",

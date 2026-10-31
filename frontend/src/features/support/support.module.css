@@ -1,0 +1,73 @@
+/* Ticket queue and record, on the shared operational tokens. */
+
+.toolbar, .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+.form { display: grid; gap: var(--space-3); max-width: 560px; }
+.section { margin-bottom: var(--space-5); }
+.section h2 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+.section h3 { font-size: var(--text-md, 1rem); margin-block: var(--space-3) var(--space-2); }
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+}
+.facts dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* The first thing Support sees: the caller's details get one box. */
+.lookup {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  margin-bottom: var(--space-4);
+}
+.results { display: grid; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.unitPick {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.blocked {
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  margin-block: var(--space-3);
+}
+.notice {
+  color: var(--tone-waiting-text);
+  background: var(--tone-waiting-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  margin-block: var(--space-3);
+}
+.error { color: var(--tone-blocked-text); font-size: var(--text-sm); }
+.voided { text-decoration: line-through; color: var(--color-text-muted); }
+
+@media (max-width: 600px) {
+  .facts { grid-template-columns: 1fr; gap: var(--space-1); }
+  .facts dd { margin-bottom: var(--space-2); }
+}

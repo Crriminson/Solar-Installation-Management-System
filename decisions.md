@@ -83,6 +83,12 @@ Not done:
 | D050 | A replacement made after expiry is stored with zero coverage | Confirmed | Follows D020 and D021 together. The claim is honoured and the link kept, but there is nothing left to inherit and no cover is invented |
 | D051 | F12 ships replacement as a tested service; the write action arrives with F13 | Confirmed | Owner approved 2026-10-31. A replacement is always a ticket action, and an endpoint now would let the warranty say a unit was swapped while stock said otherwise |
 | D052 | A delivery cannot predate its order's confirmation | Confirmed | Every warranty starts from this date and cannot be edited. Compared with confirmation, not dispatch: dispatched_at is when dispatch was keyed in, which can fall after a true delivery time |
+| D053 | The complaint time is always the server's; a date the customer claims goes to an operations manager's review | Confirmed | Implements D021 and spec.md F13 "disputed or backdated cases go to authorized review". Support cannot rule on its own claims. Coverage is fixed once work starts |
+| D054 | A ticket belongs to the order its equipment came on, one order per ticket | Confirmed | A repair invoice needs an order. Equipment from two orders takes two tickets |
+| D055 | Repair invoices count towards Order.outstanding | Confirmed | A repair receipt lands in the order's ledger, so leaving repairs out would make paying for a repair look like paying off the installation |
+| D056 | Each work line is billed once, by being attached to an invoice | Confirmed | Finishing twice or reopening a ticket can never charge the same line again. Covered lines raise the zero-charge invoice spec.md F19 requires |
+| D057 | Approved scope is the estimate's tax-inclusive total, and a new estimate suspends the old approval until the customer decides | Confirmed | Spec.md F13: exceeding approved scope requires fresh approval. Replacement units count against scope too, and are priced before any stock moves |
+| D058 | A service visit finishes with the ticket's work, with no acceptance step of its own | Confirmed | The customer's say on a repair is the ticket's confirmation (F13), which is separate from installation acceptance (F11) |
 
 ## 3. Resolved decisions and their consequences
 
@@ -168,7 +174,7 @@ Corroborating official sources for central, Delhi and UP:
 | F10 | Scheduling and installation | Implemented | Overlapping assignments rejected with the technician's row locked; reschedule keeps the previous slot and its reason; a technician sees only their own jobs, on a thinner payload |
 | F11 | Installation evidence | Implemented | Submission refused while evidence is missing; acceptance must quote the revision shown; refusal is a recorded outcome that sends the job back, not an error |
 | F12 | Warranties | Verified | Delivery issues one warranty per serialized unit in its own transaction, with the policy copied and the row uneditable. Leap day, Kolkata start date, snapshot, inheritance and replacement after expiry tested; concurrent deliveries and replacements tested on real threads. 386 backend tests pass on PostgreSQL 16; 15 of 15 deliberately broken rules caught; browser delivery, serial lookup, role refusal and replacement history checked at desktop and phone width. Replacement is a service until F13 calls it (D051). See f12-warranties.md |
-| F13 | Support and replacements | Not Started | — |
+| F13 | Support and replacements | Verified | Lookup by name, phone, order or serial with warranty status beside each unit. Coverage judged on the server's complaint time and fixed once work starts; claimed dates go to manager review. Covered work invoices zero with internal cost kept; uncovered work needs a named approval and stops at the approved total. A replacement issues the new unit through every stock state, takes the old one back and moves the warranty. Closes only on recorded customer confirmation, enforced by a database constraint. Double submits, double finishes and a contested spare tested on real threads. Browser walkthrough across support, operations, technician and finance |
 | F14 | Costs and finance | Not Started | Scope set (D025) |
 | F15 | Dashboard and exports | Not Started | — |
 | F16 | Telegram | Not Started | Final phase by D006 |

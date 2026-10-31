@@ -18,6 +18,7 @@ import { hasRole, useStaffUser, type StaffUser } from "../auth/session";
 import { fetchEnquiries, type QueueFilters } from "../enquiries/api";
 import { QUEUE_REFRESH_MS } from "../enquiries/queue";
 import type { EnquiryListItem } from "../enquiries/types";
+import { fetchTickets } from "../support/api";
 import { fetchSurveys, type SurveyFilters } from "../surveys/api";
 import styles from "./MyWorkPage.module.css";
 
@@ -29,6 +30,7 @@ export default function MyWorkPage() {
   const showSales = hasRole(user, "sales");
   const showOperations = hasRole(user, "operations_manager");
   const showField = hasRole(user, "technician");
+  const showSupport = hasRole(user, "support");
 
   return (
     <>
@@ -37,7 +39,8 @@ export default function MyWorkPage() {
       {showSales && <SalesWork />}
       {showOperations && <OperationsWork />}
       {showField && <TechnicianWork />}
-      {!showSales && !showOperations && !showField && <NoQueue user={user} />}
+      {showSupport && <SupportWork />}
+      {!showSales && !showOperations && !showField && !showSupport && <NoQueue user={user} />}
     </>
   );
 }
@@ -119,6 +122,23 @@ function TechnicianWork() {
   );
 }
 
+function SupportWork() {
+  const open = useTicketCount({ open: "true" });
+  const unassigned = useTicketCount({ unassigned: "true" });
+  const high = useTicketCount({ open: "true", priority: "high" });
+
+  return (
+    <section className={styles.group}>
+      <h2 className={styles.groupTitle}>Support</h2>
+      <div className={styles.cues}>
+        <Cue label="Open tickets" count={open} to="/tickets" />
+        <Cue label="Unassigned" count={unassigned} to="/tickets?view=unassigned" urgent />
+        <Cue label="High priority" count={high} to="/tickets?view=high" urgent />
+      </div>
+    </section>
+  );
+}
+
 /* Honest about roles whose features do not exist yet. */
 function NoQueue({ user }: { user: StaffUser }) {
   return (
@@ -160,6 +180,15 @@ function queueQuery(filters: QueueFilters) {
 
 function useCount(filters: QueueFilters) {
   return useQuery(queueQuery(filters)).data?.count;
+}
+
+function useTicketCount(filters: Record<string, string>) {
+  const params = new URLSearchParams(filters);
+  const query = useQuery({
+    queryKey: ["tickets", "count", params.toString()],
+    queryFn: () => fetchTickets(params),
+  });
+  return query.data?.count;
 }
 
 function useSurveyCount(filters: SurveyFilters) {

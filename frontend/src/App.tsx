@@ -39,6 +39,9 @@ import InstallationForm from "./features/installations/installation_form";
 import InstallationAccept from "./features/installations/installation_accept";
 import WarrantyList from "./features/warranties/warranty_list";
 import WarrantyRecord from "./features/warranties/warranty_record";
+import TicketList from "./features/support/ticket_list";
+import TicketNew from "./features/support/ticket_new";
+import TicketRecord from "./features/support/ticket_record";
 
 export default function App() {
   return (
@@ -69,6 +72,9 @@ export default function App() {
         <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
         <Route path="/warranties" element={<WarrantyList />} />
         <Route path="/warranties/:warrantyId" element={<WarrantyRecord />} />
+        <Route path="/tickets" element={<TicketList />} />
+        <Route path="/tickets/new" element={<TicketNew />} />
+        <Route path="/tickets/:ticketId" element={<TicketRecord />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

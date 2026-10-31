@@ -1,8 +1,8 @@
 # F12 — Warranties
 
 **Status: Verified.** This describes what was built. The evidence is in
-section 11. Replacement can only be triggered from tests until
-F13 adds the ticket that calls it (section 5).
+section 11. Replacements are made from an F13 ticket, which calls the service
+described in section 5.
 
 Source of the requirement: spec.md F12, section 6 (Time, Snapshots, History,
 Concurrency), section 14 (defaults) and decisions D015, D020 and D021.
@@ -171,17 +171,17 @@ F12 ships `record_replacement()` as a tested service with **no HTTP endpoint
 and no button**. A replacement is always a ticket action. F13 owns the
 physical work (reserving and issuing the new unit, returning or quarantining
 the old one) and calls this service. Adding an endpoint now would let the
-warranty record say a unit was swapped while stock said otherwise. Until
-F13 lands, replacement history is visible on screen but only tests can
-create one. This is decision D051.
+warranty record say a unit was swapped while stock said otherwise. This is
+decision D051.
 
-What F13 needs to know when it calls the service:
+How F13 calls the service:
 
-- Issue the new unit first. The service refuses a unit that is not delivered
-  or installed for this customer, so F13 must also set its customer and site.
-- Pass `complaint_at`, `replaced_at` and `reason`.
-- Lock the warranty before the unit, as the service does, to avoid deadlocks.
-- Adding the ticket link to `AssetWarranty` is F13's migration.
+- The new unit is issued first, because the service refuses a unit that is not
+  delivered or installed for this customer.
+- It passes `complaint_at`, `replaced_at` and `reason`, plus `reviewed` when an
+  operations manager has accepted a disputed claim, since that review is the
+  authority on cover.
+- The ticket link lives on F13's `Replacement` record, not on `AssetWarranty`.
 
 ## 6. Data model
 
@@ -392,9 +392,9 @@ displayed date. Section 4.4 is the fix, with tests that failed first.
   no policy to snapshot at delivery. Worth considering: have package review
   (F04) refuse a serialized product with no policy. That changes F04, so it
   needs its own instruction.
-- **The returned-unit path does not end a warranty.** No return flow exists
-  yet. F13 needs to decide what happens to cover on a return that is not a
-  replacement.
+- **A return that is not a replacement does not end a warranty.** F13 only
+  covers replacement. No flow exists yet for a customer simply handing a unit
+  back.
 - **Found during F12, not fixed: a wrong banner on delivered orders.** The
   order record says "Dispatch is held until ₹X has cleared. ₹X has cleared so
   far" once an order is delivered, because `dispatch_allowed` is only true while
