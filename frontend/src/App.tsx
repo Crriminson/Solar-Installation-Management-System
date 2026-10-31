@@ -31,6 +31,7 @@ export default function App() {
       {/* Staff: inside the app frame, after signing in. */}
       <Route element={<RequireStaff />}>
         <Route path="/work" element={<MyWorkPage />} />
+        <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
         <Route path="/surveys" element={<SurveyList />} />

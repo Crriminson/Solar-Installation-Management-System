@@ -41,6 +41,7 @@ export interface MeasurementValues {
 }
 
 export interface SurveyRevision {
+  revision: number;
   id: number;
   revision_number: number;
   status: RevisionStatus;
@@ -73,6 +74,9 @@ export interface SurveyRevision {
 }
 
 export interface Survey {
+  site_state: string;
+  revision: number;
+  assigned_to: number | null;
   id: number;
   enquiry: number;
   enquiry_reference: string;

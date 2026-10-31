@@ -214,18 +214,19 @@ class ReviewFlowTests(TestCase):
         self.assertEqual(self.revision.status, RevisionStatus.CHANGES_REQUESTED)
         self.assertIn("straight-line", self.revision.review_notes)
 
-    def test_a_bounced_revision_is_answered_with_a_new_one(self):
+    def test_requested_changes_are_corrected_and_resubmitted_on_the_same_revision(self):
         self.revision.submit()
         self.revision.review(
             RevisionStatus.CHANGES_REQUESTED, reviewer=self.manager, notes="Remeasure"
         )
 
-        corrected = make_revision(self.survey, self.technician, cable_distance_m="31.00")
+        self.revision.cable_distance_m = "31.00"
+        self.revision.save()
+        self.revision.submit()
 
-        self.assertEqual(corrected.revision_number, 2)
-        # The bounced revision is untouched.
-        self.revision.refresh_from_db()
-        self.assertEqual(self.revision.status, RevisionStatus.CHANGES_REQUESTED)
+        self.assertEqual(self.revision.revision_number, 1)
+        self.assertEqual(self.revision.status, RevisionStatus.SUBMITTED)
+        self.assertEqual(self.survey.revisions.count(), 1)
 
     def approve_first_then_add_second(self):
         self.revision.submit()
@@ -339,6 +340,8 @@ class SurveyApiTests(TestCase):
         self.manager = User.objects.create_user(
             username="mgr", password="test-pass-123", roles=[Role.OPERATIONS_MANAGER]
         )
+        self.survey.assigned_to = self.technician
+        self.survey.save()
         self.client.login(username="tech", password="test-pass-123")
 
     def test_creating_a_revision_records_the_logged_in_technician(self):
@@ -370,11 +373,11 @@ class SurveyApiTests(TestCase):
 
         response = self.client.post(
             reverse("revision-review", args=[revision.id]),
-            {"decision": "approved"},
+            {"decision": "approved", "revision": revision.revision},
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 403)
         self.assertIn("operations manager", response.json()["detail"])
 
     def test_manager_approving_through_the_api_succeeds(self):
@@ -384,7 +387,7 @@ class SurveyApiTests(TestCase):
 
         response = self.client.post(
             reverse("revision-review", args=[revision.id]),
-            {"decision": "approved"},
+            {"decision": "approved", "revision": revision.revision},
             content_type="application/json",
         )
 
@@ -392,6 +395,7 @@ class SurveyApiTests(TestCase):
         self.assertTrue(Survey.objects.get().is_approved)
 
     def test_starting_a_survey_twice_returns_the_same_one(self):
+        self.client.force_login(self.manager)
         enquiry = self.survey.enquiry
 
         response = self.client.post(

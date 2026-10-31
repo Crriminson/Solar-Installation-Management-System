@@ -10,14 +10,15 @@
 
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError, fieldErrorsFrom, type FieldErrors } from "../../api/client";
 import Button from "../../components/Button";
 import { SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
-import { dateTimeInputToIso, formatDateTime, formatQuantity, nowForDateTimeInput } from "../../lib/format";
-import { createRevision } from "./api";
+import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { dateTimeForInput, dateTimeInputToIso, formatDateTime, formatQuantity, nowForDateTimeInput } from "../../lib/format";
+import { createRevision, editRevision, fetchSurvey } from "./api";
 import {
   GRID_SUITABLE_OPTIONS,
   labelFor,
@@ -25,7 +26,7 @@ import {
   ROOF_TYPE_OPTIONS,
   SYSTEM_TYPE_OPTIONS,
 } from "./labels";
-import type { MeasurementValues } from "./types";
+import type { MeasurementValues, SurveyRevision } from "./types";
 import styles from "./SurveyStepForm.module.css";
 
 type FieldName = keyof MeasurementValues;
@@ -93,18 +94,36 @@ const TOTAL_STEPS = STEPS.length + 1;
 const GENERAL_ERROR_FIELD = "non_field_errors";
 
 export default function SurveyStepForm() {
+  const { surveyId = "", revisionId } = useParams();
+  const query = useQuery({ queryKey: ["surveys", surveyId], queryFn: () => fetchSurvey(surveyId) });
+  if (query.isPending) return <LoadingMessage label="Loading survey…" />;
+  if (query.isError) return <ErrorMessage error={query.error} onRetry={query.refetch} />;
+  const initial = query.data.revisions.find((revision) => String(revision.id) === revisionId);
+  if (revisionId && !initial) return <p role="alert">This survey revision does not exist.</p>;
+  return <SurveyMeasurementForm key={revisionId ?? "new"} initial={initial} />;
+}
+
+
+function SurveyMeasurementForm({ initial: loadedRevision }: { initial?: SurveyRevision }) {
+  const [initial] = useState(loadedRevision);
   const { surveyId = "" } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [values, setValues] = useState<MeasurementValues>({
+  const [reason, setReason] = useState("");
+  const [values, setValues] = useState<MeasurementValues>(initial ? valuesFromRevision(initial) : {
     ...EMPTY_VALUES,
     surveyed_at: nowForDateTimeInput(),
   });
   const [step, setStep] = useState(0);
 
   const mutation = useMutation({
-    mutationFn: () => createRevision(surveyId, toPayload(values)),
+    mutationFn: () => {
+      const payload = toPayload(values);
+      if (!initial) return createRevision(surveyId, payload);
+      if (values.surveyed_at === dateTimeForInput(initial.surveyed_at)) payload.surveyed_at = initial.surveyed_at;
+      return editRevision(String(initial.id), { ...payload, revision: initial.revision, reason });
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["surveys"] });
       navigate(`/surveys/${surveyId}`, { replace: true });
@@ -147,6 +166,7 @@ export default function SurveyStepForm() {
           {errors[GENERAL_ERROR_FIELD]?.[0] ?? describeError(mutation.error)}
         </p>
       )}
+      {initial && <TextAreaField label="Correction reason" hint="Required if the actual survey time changes." value={reason} onChange={setReason} error={errors.reason?.[0]} />}
 
       <div className={styles.fields}>
         {step === 0 && (
@@ -290,7 +310,7 @@ export default function SurveyStepForm() {
             disabled={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
-            {mutation.isPending ? "Saving…" : "Save draft"}
+            {mutation.isPending ? "Saving…" : initial ? "Save correction" : "Save draft"}
           </Button>
         ) : (
           <Button variant="primary" disabled={!canContinue} onClick={() => setStep(step + 1)}>
@@ -361,4 +381,14 @@ function firstStepWithError(errors: FieldErrors) {
     step.fields.some((field) => errors[field]),
   );
   return index === -1 ? null : index;
+}
+
+
+function valuesFromRevision(revision: SurveyRevision): MeasurementValues {
+  const values = { ...EMPTY_VALUES };
+  for (const name of Object.keys(EMPTY_VALUES) as FieldName[]) {
+    values[name] = String(revision[name] ?? "");
+  }
+  values.surveyed_at = dateTimeForInput(revision.surveyed_at);
+  return values;
 }

@@ -63,10 +63,10 @@ class SurveyRevisionSerializer(serializers.ModelSerializer):
 
     photos = SurveyPhotoSerializer(many=True, read_only=True)
     surveyed_by_name = serializers.CharField(
-        source="surveyed_by.get_full_name", default="", read_only=True
+        source="surveyed_by.__str__", default="", read_only=True
     )
     reviewed_by_name = serializers.CharField(
-        source="reviewed_by.get_full_name", default="", read_only=True
+        source="reviewed_by.__str__", default="", read_only=True
     )
     is_editable = serializers.BooleanField(read_only=True)
 
@@ -78,6 +78,7 @@ class SurveyRevisionSerializer(serializers.ModelSerializer):
             "surveyed_by", "surveyed_by_name",
             "submitted_at", "reviewed_by", "reviewed_by_name",
             "reviewed_at", "review_notes", "photos", "created_at",
+            "revision",
         ]
         read_only_fields = [
             "revision_number", "status", "surveyed_by",
@@ -95,6 +96,7 @@ class SurveySerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(
         source="enquiry.site.customer.full_name", read_only=True
     )
+    site_state = serializers.CharField(source="enquiry.site.state", read_only=True)
     is_approved = serializers.SerializerMethodField()
 
     class Meta:
@@ -102,6 +104,8 @@ class SurveySerializer(serializers.ModelSerializer):
         fields = [
             "id", "enquiry", "enquiry_reference", "customer_name",
             "is_approved", "revisions", "created_at",
+            "assigned_to", "revision",
+            "site_state",
         ]
 
     def get_is_approved(self, survey) -> bool:
@@ -145,7 +149,11 @@ class RevisionCreateSerializer(serializers.ModelSerializer):
         # Runs the model's own checks, so the off-grid and usable-area
         # rules apply however a revision is created.
         instance = SurveyRevision(**data)
-        instance.clean()
+        from django.core.exceptions import ValidationError
+        try:
+            instance.clean()
+        except ValidationError as exc:
+            raise serializers.ValidationError(getattr(exc, "message_dict", {"non_field_errors": exc.messages}))
         return data
 
 

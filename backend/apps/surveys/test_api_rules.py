@@ -69,7 +69,7 @@ class SurveyApiTestCase(TestCase):
         self.manager = User.objects.create_user(
             username="mgr", password=PASSWORD, roles=[Role.OPERATIONS_MANAGER]
         )
-        self.survey = Survey.objects.create(enquiry=make_enquiry())
+        self.survey = Survey.objects.create(enquiry=make_enquiry(), assigned_to=self.technician)
         self.client.login(username="tech", password=PASSWORD)
 
 
@@ -110,6 +110,7 @@ class MeasurementLimitTests(SurveyApiTestCase):
 
 class StartSurveyTests(SurveyApiTestCase):
     def start(self, enquiry):
+        self.client.force_login(self.manager)
         return self.client.post(
             reverse("survey-start"), {"enquiry": enquiry}, content_type=JSON
         )
@@ -155,7 +156,7 @@ class ReviewApiTests(SurveyApiTestCase):
 
         response = self.client.post(
             reverse("revision-review", args=[second.id]),
-            {"decision": "approved"},
+            {"decision": "approved", "revision": second.revision},
             content_type=JSON,
         )
 
@@ -173,12 +174,16 @@ class ReviewApiTests(SurveyApiTestCase):
             content_type=JSON,
         )
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 403)
         revision.refresh_from_db()
         self.assertEqual(revision.status, RevisionStatus.SUBMITTED)
 
 
 class SurveyListTests(SurveyApiTestCase):
+    def setUp(self):
+        super().setUp()
+        self.client.force_login(self.manager)
+
     def count(self, **params):
         return self.client.get(reverse("survey-list"), params).json()["count"]
 
@@ -297,7 +302,7 @@ class SimultaneousApprovalTests(TransactionTestCase):
             barrier.wait()
             response = client.post(
                 reverse("revision-review", args=[revision.id]),
-                {"decision": "approved"},
+                {"decision": "approved", "revision": revision.revision},
                 content_type=JSON,
             )
             codes.append(response.status_code)
@@ -319,8 +324,8 @@ class SimultaneousApprovalTests(TransactionTestCase):
 class RevisionNumberingConcurrencyTests(TransactionTestCase):
     def test_simultaneous_first_revisions_all_save_with_their_own_number(self):
         """A first revision has no rows to lock, so the survey is locked."""
-        User.objects.create_user("tech", password=PASSWORD, roles=[Role.TECHNICIAN])
-        survey = Survey.objects.create(enquiry=make_enquiry())
+        technician = User.objects.create_user("tech", password=PASSWORD, roles=[Role.TECHNICIAN])
+        survey = Survey.objects.create(enquiry=make_enquiry(), assigned_to=technician)
         barrier = threading.Barrier(PARALLEL_TECHNICIANS)
         codes = []
 

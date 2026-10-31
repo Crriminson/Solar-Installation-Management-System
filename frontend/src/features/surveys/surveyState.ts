@@ -26,7 +26,7 @@ export function waitingOn(survey: Survey) {
     case "submitted":
       return "Waiting on an operations manager";
     case "changes_requested":
-      return "Waiting on a new revision from the technician";
+      return "Waiting on the technician to correct and resubmit this revision";
     case "approved":
       return "Approved. A quotation can be built from this revision";
     case "rejected":

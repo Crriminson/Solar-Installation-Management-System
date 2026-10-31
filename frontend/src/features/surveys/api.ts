@@ -1,6 +1,6 @@
 /* Survey API calls (F03). */
 
-import { apiGet, apiPost } from "../../api/client";
+import { apiGet, apiPatch, apiPost } from "../../api/client";
 import type { Paginated } from "../enquiries/types";
 import type {
   MeasurementValues,
@@ -11,6 +11,7 @@ import type {
 } from "./types";
 
 export interface SurveyFilters {
+  approved?: boolean;
   search?: string;
   pending?: boolean;
   open?: boolean;
@@ -19,6 +20,7 @@ export interface SurveyFilters {
 
 export function fetchSurveys(filters: SurveyFilters) {
   const params = new URLSearchParams();
+  if (filters.approved) params.set("approved", "true");
   if (filters.search) params.set("search", filters.search);
   if (filters.pending) params.set("pending", "true");
   if (filters.open) params.set("open", "true");
@@ -41,15 +43,23 @@ export function createRevision(surveyId: string, values: Partial<MeasurementValu
   return apiPost<SurveyRevision>(`surveys/${surveyId}/revisions/`, values);
 }
 
-export function submitRevision(revisionId: number) {
-  return apiPost<SurveyRevision>(`revisions/${revisionId}/submit/`);
+export function submitRevision(revisionId: number, revision: number) {
+  return apiPost<SurveyRevision>(`revisions/${revisionId}/submit/`, { revision });
 }
 
 export function reviewRevision(
   revisionId: number,
-  data: { decision: ReviewDecision; notes: string },
+  data: { decision: ReviewDecision; notes: string; revision: number },
 ) {
   return apiPost<SurveyRevision>(`revisions/${revisionId}/review/`, data);
+}
+
+export function editRevision(revisionId: string, values: Record<string, unknown>) {
+  return apiPatch<SurveyRevision>(`revisions/${revisionId}/`, values);
+}
+
+export function assignSurvey(survey: Survey, technician: number) {
+  return apiPost<Survey>(`surveys/${survey.id}/assign/`, { assigned_to: technician, revision: survey.revision });
 }
 
 export function addPhoto(revisionId: number, photo: File, caption: string) {

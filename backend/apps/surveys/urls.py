@@ -11,9 +11,15 @@ from .views import (
     SurveyListView,
     SurveyPhotoFileView,
     SurveyStartView,
+    SurveyAssignView,
+    RevisionEditView,
+    RevisionActivityView,
 )
 
 urlpatterns = [
+    path("revisions/<int:pk>/activity/", RevisionActivityView.as_view(), name="revision-activity"),
+    path("surveys/<int:pk>/assign/", SurveyAssignView.as_view(), name="survey-assign"),
+    path("revisions/<int:pk>/", RevisionEditView.as_view(), name="revision-edit"),
     path("surveys/", SurveyListView.as_view(), name="survey-list"),
     path("surveys/start/", SurveyStartView.as_view(), name="survey-start"),
     path("surveys/<int:pk>/", SurveyDetailView.as_view(), name="survey-detail"),

@@ -14,9 +14,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button, { ButtonLink } from "../../components/Button";
+import ActivityTimeline from "../../components/activity_timeline";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import DataTable, { type Column } from "../../components/DataTable";
-import { FileField, TextAreaField, TextField } from "../../components/Field";
+import { FileField, SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
@@ -24,8 +25,9 @@ import StatusBadge from "../../components/StatusBadge";
 import StatusPath from "../../components/StatusPath";
 import { REVISION_STATUSES } from "../../components/status";
 import { formatDate, formatDateTime, formatQuantity } from "../../lib/format";
-import { useStaffUser } from "../auth/session";
-import { addPhoto, fetchSurvey, reviewRevision, submitRevision } from "./api";
+import { hasRole, useStaffUser } from "../auth/session";
+import { fetchStaff } from "../enquiries/api";
+import { addPhoto, assignSurvey, fetchSurvey, reviewRevision, submitRevision } from "./api";
 import {
   labelFor,
   ORIENTATION_OPTIONS,
@@ -45,6 +47,7 @@ const STAGES = [
 const PHOTO_FILE_TYPES = ".jpg,.jpeg,.png";
 
 export default function SurveyRecord() {
+  const user = useStaffUser();
   const { surveyId = "" } = useParams();
   const [params, setParams] = useSearchParams();
 
@@ -76,6 +79,7 @@ export default function SurveyRecord() {
       </PageHeader>
 
       {latest && <StatusPath stages={STAGES} current={pathStage(latest)} />}
+      {user.can_approve_surveys && <AssignmentForm key={survey.revision} survey={survey} />}
 
       {!latest && (
         <EmptyMessage>Nothing recorded yet. Start after the site visit.</EmptyMessage>
@@ -90,6 +94,7 @@ export default function SurveyRecord() {
       {latest?.status === "submitted" && <ReviewPanel revision={latest} survey={survey} />}
 
       {shown && <RevisionDetails revision={shown} survey={survey} />}
+      {shown && <ActivityTimeline endpoint={`revisions/${shown.id}/activity/`} revision={shown.revision} />}
 
       {survey.revisions.length > 1 && (
         <section className={styles.section}>
@@ -117,6 +122,8 @@ export default function SurveyRecord() {
 
 /* A change after a review is the next revision, never an edit. */
 function PrimaryAction({ survey }: { survey: Survey }) {
+  const user = useStaffUser();
+  if (!user.is_administrator && (!hasRole(user, "technician") || survey.assigned_to !== user.id)) return null;
   const latest = survey.revisions[0];
 
   // Secondary: an approved survey usually needs nothing more.
@@ -124,7 +131,14 @@ function PrimaryAction({ survey }: { survey: Survey }) {
     return <ButtonLink to={`/surveys/${survey.id}/new`}>Record new revision</ButtonLink>;
   }
 
-  if (!latest || latest.status === "changes_requested" || latest.status === "rejected") {
+  if (latest?.status === "changes_requested") {
+    return <div className={styles.actions}>
+      <ButtonLink to={`/surveys/${survey.id}/edit/${latest.id}`}>Correct requested revision</ButtonLink>
+      <SubmitAction revision={latest} survey={survey} />
+    </div>;
+  }
+
+  if (!latest || latest.status === "rejected") {
     return (
       <ButtonLink to={`/surveys/${survey.id}/new`} variant="primary">
         {latest ? "Record new revision" : "Record survey"}
@@ -132,7 +146,10 @@ function PrimaryAction({ survey }: { survey: Survey }) {
     );
   }
 
-  if (latest.status === "draft") return <SubmitAction revision={latest} survey={survey} />;
+  if (latest.status === "draft") return <div className={styles.actions}>
+    <ButtonLink to={`/surveys/${survey.id}/edit/${latest.id}`}>Edit draft</ButtonLink>
+    <SubmitAction revision={latest} survey={survey} />
+  </div>;
   return null;
 }
 
@@ -141,7 +158,7 @@ function SubmitAction({ revision, survey }: { revision: SurveyRevision; survey: 
   const [confirming, setConfirming] = useState(false);
 
   const mutation = useMutation({
-    mutationFn: () => submitRevision(revision.id),
+    mutationFn: () => submitRevision(revision.id, revision.revision),
     onSuccess: () => {
       setConfirming(false);
       queryClient.invalidateQueries({ queryKey: ["surveys"] });
@@ -164,7 +181,8 @@ function SubmitAction({ revision, survey }: { revision: SurveyRevision; survey: 
           onCancel={() => setConfirming(false)}
         >
           It goes to an operations manager and cannot be edited after this.
-          Any change will be a new revision.
+          A reviewer may request a correction and resubmission. Changes after
+          approval require a new revision.
         </ConfirmDialog>
       )}
     </>
@@ -179,7 +197,7 @@ const DECISIONS: Record<ReviewDecision, { label: string; effect: string }> = {
   },
   changes_requested: {
     label: "Request changes",
-    effect: "The technician records a new revision. This one stays as reported.",
+    effect: "The technician corrects this revision and resubmits. The previous submission is retained in the audit history.",
   },
   rejected: {
     label: "Reject",
@@ -195,7 +213,7 @@ function ReviewPanel({ revision, survey }: { revision: SurveyRevision; survey: S
 
   const mutation = useMutation({
     mutationFn: (chosen: ReviewDecision) =>
-      reviewRevision(revision.id, { decision: chosen, notes }),
+      reviewRevision(revision.id, { decision: chosen, notes, revision: revision.revision }),
     onSuccess: () => {
       setDecision(null);
       queryClient.invalidateQueries({ queryKey: ["surveys"] });
@@ -262,6 +280,7 @@ function ReviewPanel({ revision, survey }: { revision: SurveyRevision; survey: S
 // ============================================================
 
 function RevisionDetails({ revision, survey }: { revision: SurveyRevision; survey: Survey }) {
+  const user = useStaffUser();
   const isLatest = revision.id === survey.revisions[0].id;
 
   return (
@@ -353,7 +372,7 @@ function RevisionDetails({ revision, survey }: { revision: SurveyRevision; surve
         </FactGroup>
       </div>
 
-      <Photos revision={revision} />
+      <Photos revision={revision} canCapture={user.is_administrator || (hasRole(user, "technician") && survey.assigned_to === user.id)} />
     </section>
   );
 }
@@ -379,7 +398,7 @@ function Fact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Photos({ revision }: { revision: SurveyRevision }) {
+function Photos({ revision, canCapture }: { revision: SurveyRevision; canCapture: boolean }) {
   return (
     <div className={styles.photoSection}>
       <h3 className={styles.groupTitle}>Photos</h3>
@@ -397,7 +416,7 @@ function Photos({ revision }: { revision: SurveyRevision }) {
         ))}
       </ul>
 
-      {revision.is_editable && <AddPhoto key={revision.photos.length} revision={revision} />}
+      {revision.is_editable && canCapture && <AddPhoto key={revision.photos.length} revision={revision} />}
     </div>
   );
 }
@@ -463,4 +482,21 @@ function pathStage(revision: SurveyRevision) {
   return revision.status === "changes_requested" || revision.status === "rejected"
     ? "submitted"
     : revision.status;
+}
+
+
+function AssignmentForm({ survey }: { survey: Survey }) {
+  const staff = useQuery({ queryKey: ["staff"], queryFn: fetchStaff });
+  const [technician, setTechnician] = useState(survey.assigned_to ? String(survey.assigned_to) : "");
+  const queryClient = useQueryClient();
+  const mutation = useMutation({ mutationFn: () => assignSurvey(survey, Number(technician)),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["surveys"] }) });
+  return <section className={styles.section}>
+    <h2 className={styles.sectionTitle}>Assigned technician</h2>
+    {staff.isError && <ErrorMessage error={staff.error} onRetry={staff.refetch} />}
+    <SelectField label="Technician" value={technician} onChange={setTechnician} placeholder="Choose a technician"
+      options={(staff.data ?? []).filter((person) => person.roles.includes("technician") || person.is_administrator).map((person) => ({ value: String(person.id), label: person.name }))} />
+    {mutation.isError && <p role="alert" className={styles.error}>{describeError(mutation.error)}</p>}
+    <Button disabled={!technician || mutation.isPending} onClick={() => mutation.mutate()}>Assign survey</Button>
+  </section>;
 }

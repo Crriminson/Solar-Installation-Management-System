@@ -27,6 +27,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from apps.customers.models import Enquiry, SystemType
+from apps.core.models import record_event
 
 
 # ============================================================
@@ -51,9 +52,9 @@ ALLOWED_REVISION_CHANGES = {
         RevisionStatus.CHANGES_REQUESTED,
         RevisionStatus.REJECTED,
     ],
-    # Changes requested is terminal for this revision. The technician
-    # makes a new one rather than editing a reviewed record.
-    RevisionStatus.CHANGES_REQUESTED: [],
+    # A requested correction is resubmitted on the same revision.
+    # Its prior submission remains in the audit history.
+    RevisionStatus.CHANGES_REQUESTED: [RevisionStatus.SUBMITTED],
     # An approval ends only when a newer revision is approved. Until then
     # it stays in force, so a quotation always has one source.
     RevisionStatus.APPROVED: [RevisionStatus.SUPERSEDED],
@@ -64,7 +65,6 @@ ALLOWED_REVISION_CHANGES = {
 # A revision nobody can edit any more.
 LOCKED_STATUSES = [
     RevisionStatus.SUBMITTED,
-    RevisionStatus.CHANGES_REQUESTED,
     RevisionStatus.APPROVED,
     RevisionStatus.REJECTED,
     RevisionStatus.SUPERSEDED,
@@ -112,6 +112,9 @@ class Survey(models.Model):
     enquiry = models.OneToOneField(
         Enquiry, on_delete=models.PROTECT, related_name="survey"
     )
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+                                    null=True, blank=True, related_name="assigned_surveys")
+    revision = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -148,15 +151,15 @@ class SurveyRevision(models.Model):
     """
     One recorded attempt at surveying the site.
 
-    Editable only while it is a draft. Once submitted it is evidence of
-    what the technician reported, so it is never rewritten — a reviewer
-    asking for changes gets a new revision, not an edited old one.
+    Drafts and requested corrections are editable. Each submission is
+    retained as an audit snapshot; approval freezes the revision.
     """
 
     survey = models.ForeignKey(
         Survey, on_delete=models.PROTECT, related_name="revisions"
     )
     revision_number = models.PositiveIntegerField()
+    revision = models.PositiveIntegerField(default=1)
     status = models.CharField(
         max_length=20,
         choices=RevisionStatus.choices,
@@ -263,7 +266,7 @@ class SurveyRevision(models.Model):
 
     @property
     def is_editable(self):
-        return self.status == RevisionStatus.DRAFT
+        return self.status in (RevisionStatus.DRAFT, RevisionStatus.CHANGES_REQUESTED)
 
     def clean(self):
         """Checks that hold however the record is created."""
@@ -288,6 +291,9 @@ class SurveyRevision(models.Model):
         """Numbers the revision on first insert, then refuses edits."""
         if self.pk:
             self._refuse_edit_if_locked(kwargs.get("update_fields"))
+            self.revision += 1
+            if kwargs.get("update_fields"):
+                kwargs["update_fields"] = [*kwargs["update_fields"], "revision", "updated_at"]
             return super().save(*args, **kwargs)
 
         # Locks the parent survey, not the revisions: a first revision
@@ -328,13 +334,26 @@ class SurveyRevision(models.Model):
 
     # --- review flow -------------------------------------------------
 
-    def submit(self):
+    @transaction.atomic
+    def submit(self, actor=None):
         """Sends the revision for review."""
+        Survey.objects.select_for_update().get(pk=self.survey_id)
+        SurveyRevision.objects.select_for_update().get(pk=self.pk)
+        self.refresh_from_db()
         self._require_transition(RevisionStatus.SUBMITTED)
         self.full_clean(exclude=["revision_number"])
+        before = {"status": self.status}
         self.status = RevisionStatus.SUBMITTED
         self.submitted_at = timezone.now()
         self.save(update_fields=["status", "submitted_at"])
+        record_event(self, "submitted", actor or self.surveyed_by, before=before,
+                     after={"status": self.status, "measurements": self.measurement_snapshot(),
+                            "photo_ids": list(self.photos.values_list("id", flat=True))})
+
+    def measurement_snapshot(self):
+        """Retain the submitted evidence before any requested correction."""
+        from .serializers import MEASUREMENT_FIELDS
+        return {field: str(getattr(self, field)) for field in MEASUREMENT_FIELDS}
 
     def review(self, decision, reviewer, notes=""):
         """
@@ -352,7 +371,7 @@ class SurveyRevision(models.Model):
         """
         with transaction.atomic():
             Survey.objects.select_for_update().get(pk=self.survey_id)
-            self.refresh_from_db(fields=["status"])
+            self.refresh_from_db()
             self._record_decision(decision, reviewer, notes)
 
     def _record_decision(self, decision, reviewer, notes):
@@ -369,8 +388,9 @@ class SurveyRevision(models.Model):
             )
 
         if decision == RevisionStatus.APPROVED:
-            self._supersede_current_approval()
+            self._supersede_current_approval(reviewer)
 
+        previous_status = self.status
         self.status = decision
         self.reviewed_by = reviewer
         self.reviewed_at = timezone.now()
@@ -378,13 +398,18 @@ class SurveyRevision(models.Model):
         self.save(
             update_fields=["status", "reviewed_by", "reviewed_at", "review_notes"]
         )
+        record_event(self, "reviewed", reviewer, before={"status": previous_status},
+                     after={"status": decision}, reason=notes)
 
-    def _supersede_current_approval(self):
+    def _supersede_current_approval(self, reviewer):
         """Ends the approval this revision replaces, if there is one."""
         current = self.survey.revisions.filter(status=RevisionStatus.APPROVED).first()
         if current:
             current.status = RevisionStatus.SUPERSEDED
             current.save(update_fields=["status"])
+            record_event(current, "superseded", reviewer,
+                         before={"status": RevisionStatus.APPROVED},
+                         after={"status": RevisionStatus.SUPERSEDED})
 
     def _require_transition(self, target):
         if target not in ALLOWED_REVISION_CHANGES.get(self.status, []):
