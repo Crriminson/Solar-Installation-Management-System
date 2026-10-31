@@ -1,22 +1,106 @@
-/* Styles for the public enquiry form. All values come from tokens.css. */
+/* Styles for the enquiry form. All values come from tokens.css. */
 
-.page {
+/* Inside the app frame, which already provides the page padding. */
+.staffPage {
+  max-width: 720px;
+}
+
+/* The public page's pitch, on the brand panel. */
+.headline {
+  margin-bottom: var(--space-3);
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 34ch;
+  margin: 0 0 var(--space-4);
+  font-size: 1.125rem;
+  color: var(--color-on-ink-muted);
+}
+
+.offers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+}
+
+.offers li {
+  display: grid;
+  grid-template-columns: var(--space-3) minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.offers li::before {
+  content: "●";
+  font-size: 0.6rem;
+  line-height: 2.4;
+  color: var(--color-sun);
+}
+
+.nextTitle {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+  color: var(--color-on-ink-muted);
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: var(--space-3) minmax(0, 1fr);
+  gap: var(--space-2);
+  counter-increment: step;
+}
+
+.steps li::before {
+  content: counter(step);
+  font-weight: 700;
+  color: var(--color-sun);
+}
+
+/* The form itself. */
+.card {
   max-width: 720px;
   margin: 0 auto;
-  padding: var(--space-5) var(--space-3);
+  padding: var(--space-5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.cardTitle {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
 }
 
 .intro {
+  margin: 0 0 var(--space-4);
   color: var(--color-text-muted);
-  margin-bottom: var(--space-5);
 }
 
 .section {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-4);
 }
 
 .sectionTitle {
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
+  font-weight: 700;
   margin-bottom: var(--space-3);
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-border);
@@ -29,91 +113,74 @@
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.fieldWide {
-  grid-column: 1 / -1;
-}
-
-.label {
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.required::after {
-  content: " *";
-  color: var(--color-danger);
-}
-
-.input,
-.select,
-.textarea {
-  font: inherit;
-  color: inherit;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-surface);
-  width: 100%;
-}
-
-.textarea {
-  min-height: 90px;
-  resize: vertical;
-}
-
 .hint {
+  margin: 0 0 var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
-}
-
-.fieldError {
-  font-size: var(--text-sm);
-  color: var(--color-danger);
 }
 
 .submit {
-  font: inherit;
-  padding: var(--space-3) var(--space-5);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--color-primary);
-  color: #fff;
-  cursor: pointer;
-}
-
-.submit:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  width: 100%;
+  min-height: var(--control-height-field);
+  font-size: 1.0625rem;
 }
 
 /* Shown when the whole submission failed, not one field. */
 .formError {
   padding: var(--space-3);
   margin-bottom: var(--space-3);
-  border-left: 3px solid var(--color-danger);
-  background: var(--color-surface);
-  color: var(--color-danger);
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  border-radius: var(--radius);
 }
 
 /* Confirmation after a successful submission. */
-.success {
-  padding: var(--space-5);
-  border-left: 3px solid var(--color-success);
-  background: var(--color-surface);
+.successTitle {
+  font-size: var(--text-xl);
 }
 
 .reference {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
   font-size: var(--text-xl);
   font-weight: 600;
-  margin: var(--space-3) 0;
+  overflow-wrap: anywhere;
+  background: var(--color-primary-soft);
+  border-radius: var(--radius);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.staffLink {
+  display: inline-block;
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-muted);
+}
+
+.staffLink:hover {
+  color: var(--color-on-ink);
+}
+
+@media (max-width: 899px) {
+  .card {
+    padding: var(--space-3);
+  }
+
+  /* On a phone the form comes first. The pitch would push it down a
+     full screen. */
+  .offers,
+  .nextTitle,
+  .steps,
+  .staffLink {
+    display: none;
+  }
+
+  .lead {
+    margin-bottom: 0;
+  }
 }

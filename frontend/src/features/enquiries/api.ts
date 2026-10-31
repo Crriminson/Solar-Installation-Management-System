@@ -14,8 +14,8 @@ import type {
   Paginated,
 } from "./types";
 
-/* Submits the public enquiry form. */
-export function submitEnquiry(values: Record<string, unknown>) {
+/* Submits the enquiry form, which may carry an electricity bill. */
+export function submitEnquiry(values: FormData) {
   return apiPost<EnquiryCreated>("enquiries/submit/", values);
 }
 

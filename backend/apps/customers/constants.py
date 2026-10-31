@@ -4,6 +4,9 @@ Fixed lists used by the customer and enquiry models.
 Kept out of models.py so the models stay readable.
 """
 
+# Length of an Indian phone number, without country or trunk prefix.
+NATIONAL_PHONE_DIGITS = 10
+
 # Indian states and union territories, for the site address.
 INDIAN_STATES = [
     "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",

@@ -3,20 +3,25 @@
 export type CustomerType = "residential" | "commercial";
 export type SystemType = "on_grid" | "off_grid" | "undecided";
 
-/* What the public form posts. Optional fields may be left blank. */
+/* What the enquiry form posts. Optional fields may be left blank. */
 export interface EnquiryFormValues {
   full_name: string;
   phone: string;
   email: string;
-  customer_type: CustomerType;
+  customer_type: string;
   address_line: string;
   city: string;
   state: string;
   pincode: string;
-  requested_system_type: SystemType;
+  shadow_free_roof_area_sqm: string;
+  source: string;
+  requested_system_type: string;
   requested_capacity_kw: string;
+  electricity_connection_number: string;
   monthly_bill_amount: string;
   monthly_consumption_kwh: string;
+  billing_period_start: string;
+  billing_period_end: string;
   notes: string;
 }
 
@@ -62,8 +67,13 @@ export interface EnquiryListItem {
   lost_reason: string;
   requested_system_type: SystemType;
   requested_capacity_kw: string | null;
+  electricity_connection_number: string;
   monthly_bill_amount: string | null;
   monthly_consumption_kwh: string | null;
+  billing_period_start: string | null;
+  billing_period_end: string | null;
+  has_electricity_bill: boolean;
+  notes: string;
   is_possible_duplicate: boolean;
   created_at: string;
   site: {
@@ -72,6 +82,7 @@ export interface EnquiryListItem {
     city: string;
     state: string;
     pincode: string;
+    shadow_free_roof_area_sqm: string | null;
     customer: {
       id: number;
       full_name: string;

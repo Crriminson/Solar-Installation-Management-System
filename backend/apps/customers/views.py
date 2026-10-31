@@ -1,10 +1,12 @@
 """
-API endpoints for F01.
+API endpoints for F01 and F02.
 
-Two endpoints:
-
-    POST /api/v1/enquiries/   public, anyone can submit the web form
-    GET  /api/v1/enquiries/   staff only, the sales queue
+    POST /api/v1/enquiries/submit/          public, the web form
+    GET  /api/v1/enquiries/                 staff, the sales queue
+    GET  /api/v1/enquiries/<id>/bill/       staff, the uploaded bill
+    PATCH /api/v1/enquiries/<id>/assign/    staff
+    POST /api/v1/enquiries/<id>/status/     staff
+    GET, POST /api/v1/enquiries/<id>/contacts/   staff
 
 The public endpoint is the one place an unauthenticated person can
 write to the database, so it is rate limited and accepts only the
@@ -13,6 +15,7 @@ fields on the form.
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.http import FileResponse, Http404
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -20,7 +23,8 @@ from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
-from .models import ContactLog, Enquiry, OPEN_STATUSES
+from .constants import NATIONAL_PHONE_DIGITS
+from .models import ContactLog, Enquiry, EnquirySource, OPEN_STATUSES
 from .serializers import (
     ContactLogSerializer,
     EnquiryAssignSerializer,
@@ -57,7 +61,14 @@ class EnquiryCreateView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        enquiry = serializer.save()
+
+        # Staff say where a phone or walk-in enquiry came from. A visitor
+        # is always the web form, whatever the request claims, so source
+        # attribution can be trusted.
+        if request.user.is_authenticated:
+            enquiry = serializer.save()
+        else:
+            enquiry = serializer.save(source=EnquirySource.WEB_FORM)
 
         return Response(
             {
@@ -89,11 +100,21 @@ class EnquiryListView(generics.ListAPIView):
 
         search = params.get("search", "").strip()
         if search:
-            queryset = queryset.filter(
+            matches = (
                 Q(reference__icontains=search)
                 | Q(site__customer__full_name__icontains=search)
                 | Q(site__customer__phone__icontains=search)
             )
+
+            # Numbers are stored as 10 digits, but staff type them as
+            # they read them: +91 98765 43210, 098765-43210.
+            digits = "".join(character for character in search if character.isdigit())
+            if digits:
+                matches |= Q(
+                    site__customer__phone__icontains=digits[-NATIONAL_PHONE_DIGITS:]
+                )
+
+            queryset = queryset.filter(matches)
 
         if params.get("status"):
             queryset = queryset.filter(status=params["status"])
@@ -109,6 +130,29 @@ class EnquiryListView(generics.ListAPIView):
             )
 
         return queryset
+
+
+class EnquiryBillView(APIView):
+    """
+    GET /api/v1/enquiries/<id>/bill/
+
+    Customer documents are never served as plain files. Each download
+    is authorized here. Sent as an attachment, so a file is saved rather
+    than opened inside the app.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        enquiry = Enquiry.objects.filter(pk=pk).first()
+        if enquiry is None or not enquiry.electricity_bill:
+            raise Http404
+
+        return FileResponse(
+            enquiry.electricity_bill.open("rb"),
+            as_attachment=True,
+            filename=f"{enquiry.reference}-bill",
+        )
 
 
 # ============================================================

@@ -5,6 +5,7 @@ from django.urls import path
 from .views import (
     ContactLogListCreateView,
     EnquiryAssignView,
+    EnquiryBillView,
     EnquiryCreateView,
     EnquiryListView,
     EnquiryStatusView,
@@ -14,6 +15,7 @@ urlpatterns = [
     # F01
     path("enquiries/", EnquiryListView.as_view(), name="enquiry-list"),
     path("enquiries/submit/", EnquiryCreateView.as_view(), name="enquiry-create"),
+    path("enquiries/<int:pk>/bill/", EnquiryBillView.as_view(), name="enquiry-bill"),
 
     # F02
     path("enquiries/<int:pk>/assign/", EnquiryAssignView.as_view(), name="enquiry-assign"),

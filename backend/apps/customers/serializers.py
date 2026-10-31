@@ -20,7 +20,8 @@ from .models import (
     Site,
     SystemType,
 )
-from .constants import INDIAN_STATES
+from .constants import INDIAN_STATES, NATIONAL_PHONE_DIGITS
+from apps.uploads import validate_upload
 
 
 # ============================================================
@@ -54,13 +55,17 @@ class EnquiryListSerializer(serializers.ModelSerializer):
         source="owner.get_full_name", default="", read_only=True
     )
     is_overdue = serializers.BooleanField(read_only=True)
+    has_electricity_bill = serializers.SerializerMethodField()
 
     class Meta:
         model = Enquiry
         fields = [
             "id", "reference", "site", "source", "status",
             "requested_system_type", "requested_capacity_kw",
+            "electricity_connection_number",
             "monthly_consumption_kwh", "monthly_bill_amount",
+            "billing_period_start", "billing_period_end",
+            "has_electricity_bill", "notes",
             "is_possible_duplicate", "created_at",
             # follow-up (F02)
             "owner", "owner_name", "next_action", "next_action_due",
@@ -69,6 +74,9 @@ class EnquiryListSerializer(serializers.ModelSerializer):
 
     def get_is_possible_duplicate(self, enquiry) -> bool:
         return enquiry.possible_duplicate_of_id is not None
+
+    def get_has_electricity_bill(self, enquiry) -> bool:
+        return bool(enquiry.electricity_bill)
 
 
 # ============================================================
@@ -139,14 +147,18 @@ class EnquiryCreateSerializer(serializers.Serializer):
         """
         digits = "".join(character for character in value if character.isdigit())
 
-        if len(digits) > 10:
-            digits = digits[-10:]
+        if len(digits) > NATIONAL_PHONE_DIGITS:
+            digits = digits[-NATIONAL_PHONE_DIGITS:]
 
-        if len(digits) != 10:
+        if len(digits) != NATIONAL_PHONE_DIGITS:
             raise serializers.ValidationError(
                 "Enter a 10-digit phone number."
             )
         return digits
+
+    def validate_electricity_bill(self, value):
+        """This field is open to the public, so nothing is taken on trust."""
+        return validate_upload(value) if value else value
 
     def validate(self, data):
         start = data.get("billing_period_start")

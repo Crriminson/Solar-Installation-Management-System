@@ -1,25 +1,39 @@
 /*
-  Public enquiry form (F01).
+  Enquiry form (F01), used in two places.
 
-  The one screen an unauthenticated visitor can use. It must never lose
-  a submission, so:
+  - Publicly at /, the one screen an unauthenticated visitor can use.
+  - By staff at /enquiries/new, for a phone call or a walk-in, where
+    they also record where the enquiry came from.
+
+  It must never lose a submission, so:
 
   - the reference number shown comes from the server, after the records
     are committed, never generated here;
-  - a failure shows the real reason and keeps everything the visitor
-    typed, so they can retry without re-entering anything;
+  - a failure shows the real reason and keeps everything typed, so it
+    can be retried without re-entering anything;
   - only name, phone and address are required. Electricity details are
-    optional because a visitor rarely has their bill to hand, and an
+    optional because people rarely have their bill to hand, and an
     enquiry is worth more than a complete form.
 */
 
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { describeError, fieldErrorsFrom } from "../../api/client";
+import BrandShell from "../../components/BrandShell";
+import Button, { ButtonLink } from "../../components/Button";
+import {
+  FileField,
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "../../components/Field";
+import PageHeader from "../../components/PageHeader";
+import Reference from "../../components/Reference";
 import { submitEnquiry } from "./api";
 import { INDIAN_STATES } from "./states";
 import type { EnquiryFormValues } from "./types";
-import { ApiError } from "../../api/client";
 import styles from "./EnquiryForm.module.css";
 
 const EMPTY_FORM: EnquiryFormValues = {
@@ -31,260 +45,253 @@ const EMPTY_FORM: EnquiryFormValues = {
   city: "",
   state: "",
   pincode: "",
+  shadow_free_roof_area_sqm: "",
+  source: "phone",
   requested_system_type: "undecided",
   requested_capacity_kw: "",
+  electricity_connection_number: "",
   monthly_bill_amount: "",
   monthly_consumption_kwh: "",
+  billing_period_start: "",
+  billing_period_end: "",
   notes: "",
 };
 
-/* Field errors arrive from the API as { field: ["message"] }. */
-type FieldErrors = Record<string, string[]>;
+const SOURCE_OPTIONS = [
+  { value: "phone", label: "Phone call" },
+  { value: "whatsapp", label: "WhatsApp message" },
+  { value: "walk_in", label: "Walk-in" },
+  { value: "referral", label: "Referral" },
+  { value: "other", label: "Other" },
+];
 
-export default function EnquiryForm() {
+const CUSTOMER_TYPE_OPTIONS = [
+  { value: "residential", label: "Home" },
+  { value: "commercial", label: "Business" },
+];
+
+const SYSTEM_TYPE_OPTIONS = [
+  { value: "undecided", label: "Not sure yet" },
+  { value: "on_grid", label: "On-grid" },
+  { value: "off_grid", label: "Off-grid, with battery" },
+];
+
+const STATE_OPTIONS = INDIAN_STATES.map((state) => ({ value: state, label: state }));
+
+const BILL_FILE_TYPES = ".pdf,.jpg,.jpeg,.png";
+
+interface EnquiryFormProps {
+  staff?: boolean;
+}
+
+export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
+  const queryClient = useQueryClient();
   const [values, setValues] = useState<EnquiryFormValues>(EMPTY_FORM);
+  const [bill, setBill] = useState<File | null>(null);
   const [reference, setReference] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: submitEnquiry,
-    onSuccess: (data) => setReference(data.reference),
+    onSuccess: (data) => {
+      setReference(data.reference);
+      if (staff) queryClient.invalidateQueries({ queryKey: ["enquiries"] });
+    },
   });
 
-  function updateField(name: keyof EnquiryFormValues, value: string) {
-    setValues((current) => ({ ...current, [name]: value }));
+  function update(name: keyof EnquiryFormValues) {
+    return (value: string) =>
+      setValues((current) => ({ ...current, [name]: value }));
+  }
+
+  function startAnother() {
+    setValues(EMPTY_FORM);
+    setBill(null);
+    setReference(null);
+    mutation.reset();
   }
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-
-    // Blank optional fields are dropped rather than sent as "", which
-    // the API would reject as an invalid number.
-    const payload = Object.fromEntries(
-      Object.entries(values).filter(([, value]) => value !== ""),
-    );
-    mutation.mutate(payload);
+    mutation.mutate(buildFormData(values, bill, staff));
   }
 
-  const fieldErrors: FieldErrors =
-    mutation.error instanceof ApiError &&
-    mutation.error.details &&
-    typeof mutation.error.details === "object"
-      ? (mutation.error.details as FieldErrors)
-      : {};
+  const fieldErrors = fieldErrorsFrom(mutation.error);
 
-  function errorFor(field: keyof EnquiryFormValues) {
-    return fieldErrors[field]?.[0];
+  /* A text input bound to one form value, with its server error. */
+  function bind(name: keyof EnquiryFormValues) {
+    return {
+      value: values[name],
+      onChange: update(name),
+      error: fieldErrors[name]?.[0],
+    };
   }
-
-  // --- after a successful submission --------------------------------
 
   if (reference) {
     return (
-      <main className={styles.page}>
-        <div className={styles.success}>
-          <h1>Enquiry received</h1>
-          <p>Keep this reference for any follow-up:</p>
-          <p className={styles.reference}>{reference}</p>
-          <p>Our team will call you shortly to discuss your roof.</p>
-        </div>
-      </main>
+      <Confirmation reference={reference} staff={staff} onAnother={startAnother} />
     );
   }
 
-  // --- the form -----------------------------------------------------
-
-  return (
-    <main className={styles.page}>
-      <h1>Request a solar quote</h1>
-      <p className={styles.intro}>
-        Tell us about your roof and we will get back to you. Only the
-        starred fields are needed.
-      </p>
-
+  const form = (
+    <form onSubmit={handleSubmit} noValidate>
       {mutation.isError && (
         <div className={styles.formError} role="alert">
           {Object.keys(fieldErrors).length > 0
             ? "Please correct the highlighted fields below."
-            : "We could not submit your enquiry. Please try again."}
+            : describeError(mutation.error)}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} noValidate>
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>About you</h2>
-          <div className={styles.grid}>
-            <Field
-              label="Full name"
-              name="full_name"
-              required
-              value={values.full_name}
-              error={errorFor("full_name")}
-              onChange={updateField}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>{staff ? "Customer" : "About you"}</h2>
+        <div className={styles.grid}>
+          <TextField label="Full name" required autoComplete="name" {...bind("full_name")} />
+          <TextField
+            label="Phone"
+            required
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            hint="10 digits. +91 is fine."
+            {...bind("phone")}
+          />
+          <TextField
+            label="Email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            {...bind("email")}
+          />
+          <SelectField
+            label="Property type"
+            options={CUSTOMER_TYPE_OPTIONS}
+            {...bind("customer_type")}
+          />
+          {staff && (
+            <SelectField
+              label="How did they reach us?"
+              options={SOURCE_OPTIONS}
+              {...bind("source")}
             />
-            <Field
-              label="Phone"
-              name="phone"
-              required
-              value={values.phone}
-              error={errorFor("phone")}
-              hint="10 digits. +91 is fine."
-              onChange={updateField}
-            />
-            <Field
-              label="Email"
-              name="email"
-              type="email"
-              value={values.email}
-              error={errorFor("email")}
-              onChange={updateField}
-            />
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="customer_type">
-                Property type
-              </label>
-              <select
-                id="customer_type"
-                className={styles.select}
-                value={values.customer_type}
-                onChange={(e) => updateField("customer_type", e.target.value)}
-              >
-                <option value="residential">Home</option>
-                <option value="commercial">Business</option>
-              </select>
-            </div>
-          </div>
-        </section>
+          )}
+        </div>
+      </section>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Where is the roof</h2>
-          <div className={styles.grid}>
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label className={`${styles.label} ${styles.required}`} htmlFor="address_line">
-                Address
-              </label>
-              <input
-                id="address_line"
-                className={styles.input}
-                value={values.address_line}
-                onChange={(e) => updateField("address_line", e.target.value)}
-              />
-              {errorFor("address_line") && (
-                <span className={styles.fieldError}>{errorFor("address_line")}</span>
-              )}
-            </div>
-            <Field
-              label="City"
-              name="city"
-              required
-              value={values.city}
-              error={errorFor("city")}
-              onChange={updateField}
-            />
-            <div className={styles.field}>
-              <label className={`${styles.label} ${styles.required}`} htmlFor="state">
-                State
-              </label>
-              <select
-                id="state"
-                className={styles.select}
-                value={values.state}
-                onChange={(e) => updateField("state", e.target.value)}
-              >
-                <option value="">Select a state</option>
-                {INDIAN_STATES.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
-                  </option>
-                ))}
-              </select>
-              {errorFor("state") && (
-                <span className={styles.fieldError}>{errorFor("state")}</span>
-              )}
-            </div>
-            <Field
-              label="PIN code"
-              name="pincode"
-              required
-              value={values.pincode}
-              error={errorFor("pincode")}
-              onChange={updateField}
-            />
-          </div>
-        </section>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Where is the roof</h2>
+        <div className={styles.grid}>
+          <TextField
+            label="Address"
+            required
+            wide
+            autoComplete="street-address"
+            {...bind("address_line")}
+          />
+          <TextField label="City" required {...bind("city")} />
+          <SelectField
+            label="State"
+            required
+            options={STATE_OPTIONS}
+            placeholder="Select a state"
+            {...bind("state")}
+          />
+          <TextField
+            label="PIN code"
+            required
+            inputMode="numeric"
+            autoComplete="postal-code"
+            {...bind("pincode")}
+          />
+          <TextField
+            label="Shadow-free roof area"
+            inputMode="decimal"
+            unit="m²"
+            hint="Open to the sun for most of the day."
+            {...bind("shadow_free_roof_area_sqm")}
+          />
+        </div>
+      </section>
 
-        <section className={styles.section}>
-          <h2 className={styles.sectionTitle}>Your electricity use</h2>
-          <p className={styles.hint}>
-            All optional. Skip anything you do not know.
-          </p>
-          <div className={styles.grid}>
-            <div className={styles.field}>
-              <label className={styles.label} htmlFor="requested_system_type">
-                System type
-              </label>
-              <select
-                id="requested_system_type"
-                className={styles.select}
-                value={values.requested_system_type}
-                onChange={(e) =>
-                  updateField("requested_system_type", e.target.value)
-                }
-              >
-                <option value="undecided">Not sure yet</option>
-                <option value="on_grid">On-grid</option>
-                <option value="off_grid">Off-grid, with battery</option>
-              </select>
-            </div>
-            <Field
-              label="Capacity wanted (kW)"
-              name="requested_capacity_kw"
-              type="number"
-              value={values.requested_capacity_kw}
-              error={errorFor("requested_capacity_kw")}
-              onChange={updateField}
-            />
-            {/* Bill amount and units are asked separately on purpose:
-                a slabbed tariff means neither gives you the other. */}
-            <Field
-              label="Monthly bill (INR)"
-              name="monthly_bill_amount"
-              type="number"
-              value={values.monthly_bill_amount}
-              error={errorFor("monthly_bill_amount")}
-              onChange={updateField}
-            />
-            <Field
-              label="Monthly units (kWh)"
-              name="monthly_consumption_kwh"
-              type="number"
-              value={values.monthly_consumption_kwh}
-              error={errorFor("monthly_consumption_kwh")}
-              hint="On your bill, separate from the amount."
-              onChange={updateField}
-            />
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label className={styles.label} htmlFor="notes">
-                Anything else
-              </label>
-              <textarea
-                id="notes"
-                className={styles.textarea}
-                value={values.notes}
-                onChange={(e) => updateField("notes", e.target.value)}
-              />
-            </div>
-          </div>
-        </section>
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Electricity use</h2>
+        <p className={styles.hint}>All optional. Skip anything you do not know.</p>
+        <div className={styles.grid}>
+          <SelectField
+            label="System type"
+            options={SYSTEM_TYPE_OPTIONS}
+            {...bind("requested_system_type")}
+          />
+          <TextField
+            label="Capacity wanted"
+            inputMode="decimal"
+            unit="kW"
+            {...bind("requested_capacity_kw")}
+          />
+          <TextField
+            label="Connection number"
+            hint="Printed on the electricity bill."
+            {...bind("electricity_connection_number")}
+          />
+          {/* Bill amount and units are asked separately on purpose:
+              a slabbed tariff means neither gives you the other. */}
+          <TextField
+            label="Monthly bill"
+            inputMode="decimal"
+            unit="₹"
+            {...bind("monthly_bill_amount")}
+          />
+          <TextField
+            label="Monthly units"
+            inputMode="decimal"
+            unit="kWh"
+            hint="On the bill, separate from the amount."
+            {...bind("monthly_consumption_kwh")}
+          />
+          <TextField label="Billing period from" type="date" {...bind("billing_period_start")} />
+          <TextField label="Billing period to" type="date" {...bind("billing_period_end")} />
+          <FileField
+            label="Electricity bill"
+            wide
+            accept={BILL_FILE_TYPES}
+            hint="PDF, JPEG or PNG, up to 10 MB."
+            error={fieldErrors.electricity_bill?.[0]}
+            onChange={setBill}
+          />
+          <TextAreaField label="Anything else" wide {...bind("notes")} />
+        </div>
+      </section>
 
-        <button
-          type="submit"
-          className={styles.submit}
-          disabled={mutation.isPending}
-        >
-          {mutation.isPending ? "Sending…" : "Send enquiry"}
-        </button>
-      </form>
-    </main>
+      <Button
+        type="submit"
+        variant="primary"
+        className={styles.submit}
+        disabled={mutation.isPending}
+      >
+        {mutation.isPending ? "Sending…" : staff ? "Save enquiry" : "Send enquiry"}
+      </Button>
+    </form>
+  );
+
+  if (staff) {
+    return (
+      <div className={styles.staffPage}>
+        <PageHeader
+          title="New enquiry"
+          back={{ to: "/enquiries", label: "Enquiries" }}
+        />
+        {form}
+      </div>
+    );
+  }
+
+  return (
+    <BrandShell panel={<PublicPitch />}>
+      <div className={styles.card}>
+        <h2 className={styles.cardTitle}>Tell us about your roof</h2>
+        <p className={styles.intro}>Only the starred fields are needed.</p>
+        {form}
+      </div>
+    </BrandShell>
   );
 }
 
@@ -293,45 +300,87 @@ export default function EnquiryForm() {
 // Helpers
 // ============================================================
 
-interface FieldProps {
-  label: string;
-  name: keyof EnquiryFormValues;
-  value: string;
-  onChange: (name: keyof EnquiryFormValues, value: string) => void;
-  type?: string;
-  required?: boolean;
-  hint?: string;
-  error?: string;
+/*
+  The left side of the public page: who this is, what we install, and
+  what happens after sending. Every line comes from what the company
+  really offers. No invented customer counts or savings figures.
+*/
+function PublicPitch() {
+  return (
+    <>
+      <h1 className={styles.headline}>Request a solar quote</h1>
+      <p className={styles.lead}>
+        Rooftop solar for homes and small businesses, from first call to
+        after-sales support.
+      </p>
+
+      <ul className={styles.offers}>
+        <li>On-grid and off-grid systems, 1 to 5 kW</li>
+        <li>Quotations based on a survey of your roof</li>
+        <li>20-year panel warranty, 2 years on inverters and batteries</li>
+      </ul>
+
+      <h2 className={styles.nextTitle}>What happens next</h2>
+      <ol className={styles.steps}>
+        <li>We call you to understand your needs</li>
+        <li>A technician surveys your roof</li>
+        <li>You get a quotation with any subsidy that applies</li>
+      </ol>
+
+      <Link className={styles.staffLink} to="/login">
+        Staff sign in
+      </Link>
+    </>
+  );
 }
 
-/* A labelled text input with its hint and error message. */
-function Field({
-  label,
-  name,
-  value,
-  onChange,
-  type = "text",
-  required = false,
-  hint,
-  error,
-}: FieldProps) {
-  return (
-    <div className={styles.field}>
-      <label
-        className={`${styles.label} ${required ? styles.required : ""}`}
-        htmlFor={name}
-      >
-        {label}
-      </label>
-      <input
-        id={name}
-        className={styles.input}
-        type={type}
-        value={value}
-        onChange={(event) => onChange(name, event.target.value)}
-      />
-      {hint && !error && <span className={styles.hint}>{hint}</span>}
-      {error && <span className={styles.fieldError}>{error}</span>}
+/* Shown after the records are committed. */
+function Confirmation({
+  reference,
+  staff,
+  onAnother,
+}: {
+  reference: string;
+  staff: boolean;
+  onAnother: () => void;
+}) {
+  const content = (
+    <div className={styles.card}>
+      <h1 className={styles.successTitle}>
+        {staff ? "Enquiry saved" : "Enquiry received"}
+      </h1>
+      <p>{staff ? "Its reference is:" : "Keep this reference for any follow-up:"}</p>
+      <p className={styles.reference}>
+        <Reference>{reference}</Reference>
+      </p>
+      {staff ? (
+        <div className={styles.actions}>
+          <ButtonLink to="/enquiries">Back to enquiries</ButtonLink>
+          <Button onClick={onAnother}>Add another</Button>
+        </div>
+      ) : (
+        <p>Our team will call you shortly to discuss your roof.</p>
+      )}
     </div>
   );
+
+  if (staff) return <div className={styles.staffPage}>{content}</div>;
+  return <BrandShell panel={<PublicPitch />}>{content}</BrandShell>;
+}
+
+/*
+  Blank optional fields are left out rather than sent as "", which the
+  API would reject as an invalid number. A visitor does not send a
+  source: the server records the web form for them.
+*/
+function buildFormData(values: EnquiryFormValues, bill: File | null, staff: boolean) {
+  const data = new FormData();
+
+  for (const [name, value] of Object.entries(values)) {
+    const isStaffOnly = name === "source" && !staff;
+    if (value !== "" && !isStaffOnly) data.append(name, value);
+  }
+
+  if (bill) data.append("electricity_bill", bill);
+  return data;
 }

@@ -138,7 +138,7 @@ Corroborating official sources for central, Delhi and UP:
 
 | Feature | Scope | Status | Evidence |
 |---|---|---|---|
-| F01 | Customers, sites, enquiries | Implemented | 17 tests pass; end to end verified: submission returns a reference after commit, anonymous queue read refused (403) |
+| F01 | Customers, sites, enquiries | In Progress | 112 backend tests and a 38-step browser run pass: public form with bill upload, staff entry with source, upload checks by file contents. Open: duplicate check matches phone only, and no screen resolves a duplicate flag |
 | F02 | Qualification and follow-up | Implemented | 39 tests pass; transitions, lost-reason and next-action rules enforced server side |
 | F03 | Survey and approval | Backend implemented | 62 tests pass; approved revision immutable, one-approved-per-survey enforced by a partial unique index |
 | F04 | Catalogue and packages | Not Started | Defaults set (D027, D028) |

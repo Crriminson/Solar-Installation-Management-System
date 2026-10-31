@@ -23,6 +23,7 @@ export default function App() {
       {/* Staff: inside the app frame, after signing in. */}
       <Route element={<RequireStaff />}>
         <Route path="/enquiries" element={<SalesQueue />} />
+        <Route path="/enquiries/new" element={<EnquiryForm staff />} />
       </Route>
 
       <Route path="*" element={<EmptyMessage>This page does not exist.</EmptyMessage>} />
