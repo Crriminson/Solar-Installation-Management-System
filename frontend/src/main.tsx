@@ -15,6 +15,7 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 
 import App from "./App";
 import { ApiError, isForbidden } from "./api/client";
+import { ToastProvider } from "./components/Toast";
 import { IconDefaults, ICON_SIZE } from "./design/icons";
 import { SESSION_QUERY_KEY } from "./features/auth/session";
 import "./styles/global.css";
@@ -65,9 +66,11 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <IconDefaults.Provider value={ICON_DEFAULTS}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <ToastProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </ToastProvider>
       </IconDefaults.Provider>
     </QueryClientProvider>
   </StrictMode>,
