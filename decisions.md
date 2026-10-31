@@ -135,7 +135,7 @@ Corroborating official sources for central, Delhi and UP:
 
 | Feature | Scope | Status | Evidence |
 |---|---|---|---|
-| F01 | Customers, sites, enquiries | Not Started | — |
+| F01 | Customers, sites, enquiries | Implemented | 17 tests pass; end to end verified: submission returns a reference after commit, anonymous queue read refused (403) |
 | F02 | Qualification and follow-up | Not Started | — |
 | F03 | Survey and approval | Not Started | — |
 | F04 | Catalogue and packages | Not Started | Defaults set (D027, D028) |

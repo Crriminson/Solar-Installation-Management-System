@@ -1,0 +1,119 @@
+/* Styles for the public enquiry form. All values come from tokens.css. */
+
+.page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-3);
+}
+
+.intro {
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-5);
+}
+
+.section {
+  margin-bottom: var(--space-5);
+}
+
+.sectionTitle {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Two columns on wide screens, one on narrow. */
+.grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.fieldWide {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.required::after {
+  content: " *";
+  color: var(--color-danger);
+}
+
+.input,
+.select,
+.textarea {
+  font: inherit;
+  color: inherit;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  width: 100%;
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.fieldError {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.submit {
+  font: inherit;
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: #fff;
+  cursor: pointer;
+}
+
+.submit:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Shown when the whole submission failed, not one field. */
+.formError {
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-left: 3px solid var(--color-danger);
+  background: var(--color-surface);
+  color: var(--color-danger);
+}
+
+/* Confirmation after a successful submission. */
+.success {
+  padding: var(--space-5);
+  border-left: 3px solid var(--color-success);
+  background: var(--color-surface);
+}
+
+.reference {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin: var(--space-3) 0;
+}

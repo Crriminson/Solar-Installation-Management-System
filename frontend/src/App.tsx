@@ -7,12 +7,17 @@
 
 import { Routes, Route } from "react-router-dom";
 
-import Home from "./pages/Home";
+import EnquiryForm from "./features/enquiries/EnquiryForm";
+import SalesQueue from "./features/enquiries/SalesQueue";
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      {/* Public: the enquiry form anyone can reach. */}
+      <Route path="/" element={<EnquiryForm />} />
+
+      {/* Staff: requires a Django session. */}
+      <Route path="/enquiries" element={<SalesQueue />} />
     </Routes>
   );
 }
