@@ -15,7 +15,7 @@ from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 
-from .models import ContactLog, Enquiry, EnquiryStatus
+from .models import ContactLog, Enquiry, EnquiryStatus, QUALIFICATION_CHECKS
 from .tests import VALID_PAYLOAD
 
 User = get_user_model()
@@ -24,7 +24,8 @@ User = get_user_model()
 def make_enquiry(client):
     """Creates one enquiry through the public endpoint."""
     client.post(reverse("enquiry-create"), VALID_PAYLOAD)
-    return Enquiry.objects.get()
+    enquiry = Enquiry.objects.get()
+    return enquiry
 
 
 class StatusTransitionTests(TestCase):
@@ -35,15 +36,19 @@ class StatusTransitionTests(TestCase):
         # counters in the cache, which outlives a single test.
         cache.clear()
         self.enquiry = make_enquiry(self.client)
+        self.owner = User.objects.create_user("owner", roles=["sales"])
+        self.enquiry.owner = self.owner
+        self.enquiry.save()
 
-    def test_new_enquiry_starts_unowned_and_open(self):
+    def test_assigned_new_enquiry_is_open_with_an_intake_action(self):
         self.assertEqual(self.enquiry.status, EnquiryStatus.NEW)
-        self.assertIsNone(self.enquiry.owner)
+        self.assertEqual(self.enquiry.owner, self.owner)
+        self.assertIsNotNone(self.enquiry.next_action_due)
         self.assertTrue(self.enquiry.is_open)
 
     def test_new_can_move_to_contacting(self):
         self.enquiry.change_status(
-            EnquiryStatus.CONTACTING, next_action="Call about roof size"
+            EnquiryStatus.CONTACTING, next_action="Call about roof size", next_action_due=timezone.localdate()
         )
 
         self.assertEqual(self.enquiry.status, EnquiryStatus.CONTACTING)
@@ -73,7 +78,7 @@ class StatusTransitionTests(TestCase):
         self.assertFalse(self.enquiry.is_open)
 
     def test_lost_clears_the_pending_next_action(self):
-        self.enquiry.change_status(EnquiryStatus.CONTACTING, next_action="Call back")
+        self.enquiry.change_status(EnquiryStatus.CONTACTING, next_action="Call back", next_action_due=timezone.localdate())
         self.enquiry.change_status(EnquiryStatus.LOST, reason="No budget")
 
         self.assertEqual(self.enquiry.next_action, "")
@@ -88,10 +93,10 @@ class StatusTransitionTests(TestCase):
             )
 
     def test_full_path_to_survey_scheduled(self):
-        self.enquiry.change_status(EnquiryStatus.CONTACTING, next_action="Call")
-        self.enquiry.change_status(EnquiryStatus.QUALIFIED, next_action="Book survey")
+        self.enquiry.change_status(EnquiryStatus.CONTACTING, next_action="Call", next_action_due=timezone.localdate())
+        self.enquiry.change_status(EnquiryStatus.QUALIFIED, next_action="Book survey", next_action_due=timezone.localdate(), reason="All qualification checks confirmed", qualification_checks={name: True for name in QUALIFICATION_CHECKS})
         self.enquiry.change_status(
-            EnquiryStatus.SURVEY_SCHEDULED, next_action="Technician visits Friday"
+            EnquiryStatus.SURVEY_SCHEDULED, next_action="Technician visits Friday", next_action_due=timezone.localdate()
         )
 
         self.assertEqual(self.enquiry.status, EnquiryStatus.SURVEY_SCHEDULED)
@@ -105,6 +110,9 @@ class OverdueTests(TestCase):
         # counters in the cache, which outlives a single test.
         cache.clear()
         self.enquiry = make_enquiry(self.client)
+        self.owner = User.objects.create_user("owner", roles=["sales"])
+        self.enquiry.owner = self.owner
+        self.enquiry.save()
 
     def test_lead_with_no_due_date_is_not_overdue(self):
         self.assertFalse(self.enquiry.is_overdue)
@@ -155,7 +163,7 @@ class FollowUpApiTests(TestCase):
     def test_assign_sets_owner_and_next_action(self):
         response = self.client.patch(
             reverse("enquiry-assign", args=[self.enquiry.id]),
-            {"owner": self.user.id, "next_action": "Call about roof"},
+            {"revision": self.enquiry.revision, "next_action_due": str(timezone.localdate()), "owner": self.user.id, "next_action": "Call about roof"},
             content_type="application/json",
         )
 
@@ -167,7 +175,7 @@ class FollowUpApiTests(TestCase):
     def test_assigning_an_unknown_staff_id_is_rejected(self):
         response = self.client.patch(
             reverse("enquiry-assign", args=[self.enquiry.id]),
-            {"owner": 99999, "next_action": "Call"},
+            {"revision": self.enquiry.revision, "next_action_due": str(timezone.localdate()), "owner": 99999, "next_action": "Call"},
             content_type="application/json",
         )
 
@@ -180,7 +188,7 @@ class FollowUpApiTests(TestCase):
 
         response = self.client.patch(
             reverse("enquiry-assign", args=[self.enquiry.id]),
-            {"owner": leaver.id, "next_action": "Call"},
+            {"revision": self.enquiry.revision, "next_action_due": str(timezone.localdate()), "owner": leaver.id, "next_action": "Call"},
             content_type="application/json",
         )
 
@@ -195,7 +203,7 @@ class FollowUpApiTests(TestCase):
     def test_illegal_status_jump_returns_400_with_an_explanation(self):
         response = self.client.post(
             reverse("enquiry-status", args=[self.enquiry.id]),
-            {"status": "survey_scheduled", "next_action": "Book"},
+            {"revision": self.enquiry.revision, "status": "survey_scheduled", "next_action": "Book"},
             content_type="application/json",
         )
 
@@ -252,7 +260,7 @@ class FollowUpApiTests(TestCase):
 
         self.client.patch(
             reverse("enquiry-assign", args=[self.enquiry.id]),
-            {"owner": self.user.id, "next_action": "Call"},
+            {"revision": self.enquiry.revision, "next_action_due": str(timezone.localdate()), "owner": self.user.id, "next_action": "Call"},
             content_type="application/json",
         )
 
@@ -260,6 +268,8 @@ class FollowUpApiTests(TestCase):
         self.assertEqual(response.json()["count"], 0)
 
     def test_overdue_filter_shows_leads_past_their_due_date(self):
+        self.enquiry.owner = self.user
+        self.enquiry.save()
         self.enquiry.change_status(
             EnquiryStatus.CONTACTING,
             next_action="Call",

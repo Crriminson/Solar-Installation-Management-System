@@ -168,6 +168,8 @@ class Enquiry(models.Model):
 
     reference = models.CharField(max_length=20, unique=True, editable=False)
     revision = models.PositiveIntegerField(default=1)
+    qualification_checks = models.JSONField(default=dict, blank=True)
+    qualification_reason = models.TextField(blank=True)
     duplicate_review = models.CharField(max_length=20, blank=True)
     duplicate_review_reason = models.TextField(blank=True)
     site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name="enquiries")
@@ -269,8 +271,9 @@ class Enquiry(models.Model):
             return False
         return self.next_action_due < business_date()
 
+    @transaction.atomic
     def change_status(self, new_status, *, reason="", next_action="",
-                      next_action_due=None):
+                      next_action_due=None, actor=None, qualification_checks=None):
         """
         Moves the enquiry to a new status, refusing invalid jumps.
 
@@ -279,6 +282,9 @@ class Enquiry(models.Model):
         planned next action, so nothing is left with no one due to do
         anything.
         """
+        stored = type(self).objects.select_for_update().get(pk=self.pk)
+        if stored.revision != self.revision:
+            raise ValidationError("This enquiry changed. Refresh before moving it on.")
         allowed = ALLOWED_STATUS_CHANGES.get(self.status, [])
         if new_status not in allowed:
             raise ValidationError(
@@ -298,11 +304,28 @@ class Enquiry(models.Model):
                 raise ValidationError(
                     "Set what happens next before moving this enquiry on."
                 )
+            if next_action_due is None:
+                raise ValidationError({"next_action_due": "Set the next action's due date."})
+            if self.owner_id is None:
+                raise ValidationError({"owner": "Assign an owner before moving this enquiry on."})
+            if new_status == EnquiryStatus.QUALIFIED:
+                checks = qualification_checks or {}
+                missing = [name for name in QUALIFICATION_CHECKS if checks.get(name) is not True]
+                if missing:
+                    raise ValidationError({"qualification_checks": "Confirm: " + ", ".join(missing)})
+                if not reason.strip():
+                    raise ValidationError({"reason": "Record why this lead qualifies."})
+                self.qualification_checks = checks
+                self.qualification_reason = reason.strip()
             self.next_action = next_action.strip()
             self.next_action_due = next_action_due
 
+        previous_status = self.status
         self.status = new_status
+        self.revision += 1
         self.save()
+        record_event(self, "status_changed", actor, before={"status": previous_status},
+                     after={"status": new_status}, reason=reason)
 
 
 # ============================================================
@@ -346,6 +369,9 @@ class ContactLog(models.Model):
 # ============================================================
 # Review inputs
 # ============================================================
+
+QUALIFICATION_CHECKS = ("roof", "consumption", "grid", "requirements", "documents")
+
 
 def normalized_address(address_line, city, state, pincode):
     """Ignore punctuation and spacing, while retaining locality and postcode."""

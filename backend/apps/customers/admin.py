@@ -27,6 +27,6 @@ class EnquiryAdmin(ReadOnlyRecordAdmin):
 
 
 @admin.register(ContactLog)
-class ContactLogAdmin(admin.ModelAdmin):
+class ContactLogAdmin(ReadOnlyRecordAdmin):
     list_display = ("enquiry", "channel", "contacted_at", "reached_customer", "staff")
     list_filter = ("channel", "reached_customer")

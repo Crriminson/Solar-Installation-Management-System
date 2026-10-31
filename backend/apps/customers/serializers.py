@@ -72,7 +72,7 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             # follow-up (F02)
             "owner", "owner_name", "next_action", "next_action_due",
             "is_overdue", "lost_reason", "next_statuses",
-            "revision",
+            "revision", "qualification_checks", "qualification_reason",
             "possible_duplicate_of", "duplicate_review", "duplicate_review_reason",
             "duplicate_candidate",
         ]
@@ -283,8 +283,9 @@ class EnquiryAssignSerializer(serializers.Serializer):
     """Hands an enquiry to a named owner."""
 
     owner = serializers.IntegerField()
+    revision = serializers.IntegerField(min_value=1)
     next_action = serializers.CharField(max_length=200)
-    next_action_due = serializers.DateField(required=False, allow_null=True)
+    next_action_due = serializers.DateField()
 
 
 class EnquiryStatusChangeSerializer(serializers.Serializer):
@@ -296,6 +297,8 @@ class EnquiryStatusChangeSerializer(serializers.Serializer):
     """
 
     status = serializers.ChoiceField(choices=EnquiryStatus.choices)
+    revision = serializers.IntegerField(min_value=1)
+    qualification_checks = serializers.DictField(child=serializers.BooleanField(), required=False)
     reason = serializers.CharField(required=False, allow_blank=True, default="")
     next_action = serializers.CharField(
         max_length=200, required=False, allow_blank=True, default=""

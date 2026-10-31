@@ -179,8 +179,9 @@ class EnquiryAssignView(APIView):
     quiet.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SalesAccess]
 
+    @transaction.atomic
     def patch(self, request, pk):
         enquiry = self._get_open_enquiry(pk)
         if isinstance(enquiry, Response):
@@ -189,6 +190,7 @@ class EnquiryAssignView(APIView):
         serializer = EnquiryAssignSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        check_revision(enquiry, data)
 
         from django.contrib.auth import get_user_model
 
@@ -202,16 +204,24 @@ class EnquiryAssignView(APIView):
                 {"owner": ["No staff member with that id."]},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        if not owner.has_role(Role.SALES):
+            return Response({"owner": ["Choose an active Sales staff member."]}, status=400)
 
+        before = {"owner": enquiry.owner_id, "next_action": enquiry.next_action,
+                  "next_action_due": str(enquiry.next_action_due)}
         enquiry.owner = owner
         enquiry.next_action = data["next_action"]
         enquiry.next_action_due = data.get("next_action_due")
-        enquiry.save(update_fields=["owner", "next_action", "next_action_due"])
+        enquiry.revision += 1
+        enquiry.save(update_fields=["owner", "next_action", "next_action_due", "revision", "updated_at"])
+        record_event(enquiry, "assigned", request.user, before=before,
+                     after={"owner": owner.id, "next_action": enquiry.next_action,
+                            "next_action_due": str(enquiry.next_action_due)})
 
         return Response(EnquiryListSerializer(enquiry).data)
 
     def _get_open_enquiry(self, pk):
-        enquiry = Enquiry.objects.filter(pk=pk).first()
+        enquiry = Enquiry.objects.select_for_update().filter(pk=pk).first()
         if enquiry is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
         if not enquiry.is_open:
@@ -231,16 +241,18 @@ class EnquiryStatusView(APIView):
     checks apply however the change is triggered.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SalesAccess]
 
+    @transaction.atomic
     def post(self, request, pk):
-        enquiry = Enquiry.objects.filter(pk=pk).first()
+        enquiry = Enquiry.objects.select_for_update().filter(pk=pk).first()
         if enquiry is None:
             return Response(status=status.HTTP_404_NOT_FOUND)
 
         serializer = EnquiryStatusChangeSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+        check_revision(enquiry, data)
 
         try:
             enquiry.change_status(
@@ -248,10 +260,13 @@ class EnquiryStatusView(APIView):
                 reason=data.get("reason", ""),
                 next_action=data.get("next_action", ""),
                 next_action_due=data.get("next_action_due"),
+                actor=request.user,
+                qualification_checks=data.get("qualification_checks"),
             )
         except ValidationError as exc:
             return Response(
-                {"detail": exc.messages[0]}, status=status.HTTP_400_BAD_REQUEST
+                getattr(exc, "message_dict", {"detail": exc.messages[0]}),
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         return Response(EnquiryListSerializer(enquiry).data)
@@ -267,19 +282,23 @@ class ContactLogListCreateView(generics.ListCreateAPIView):
     """
 
     serializer_class = ContactLogSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SalesAccess]
 
     def get_queryset(self):
+        get_object_or_404(Enquiry, pk=self.kwargs["pk"])
         return ContactLog.objects.filter(
             enquiry_id=self.kwargs["pk"]
         ).select_related("staff")
 
+    @transaction.atomic
     def perform_create(self, serializer):
         # Staff comes from the session, never the request body, so one
         # person cannot file a contact under someone else's name.
-        serializer.save(
+        enquiry = get_object_or_404(Enquiry.objects.select_for_update(), pk=self.kwargs["pk"])
+        entry = serializer.save(
             enquiry_id=self.kwargs["pk"], staff=self.request.user
         )
+        record_event(enquiry, "contact_recorded", self.request.user, after={"contact": entry.pk})
 
 
 class DuplicateReviewView(APIView):
