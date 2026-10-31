@@ -58,6 +58,7 @@ DATABASES = {
 
 OUR_APPS = [
     "apps.accounts",
+    "apps.customers",
 ]
 
 INSTALLED_APPS = [
