@@ -12,8 +12,19 @@ import { useState } from "react";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 
 import { fetchEnquiries } from "./api";
+import FollowUpPanel from "./FollowUpPanel";
 import type { EnquiryListItem } from "./types";
 import styles from "./SalesQueue.module.css";
+
+/* The three slices managers asked for: everything, nobody owns it,
+   or the planned action has slipped. */
+const VIEWS = [
+  { key: "all", label: "All" },
+  { key: "unassigned", label: "Unassigned" },
+  { key: "overdue", label: "Overdue" },
+] as const;
+
+type ViewKey = (typeof VIEWS)[number]["key"];
 
 /* Wait this long after the last keystroke before asking the server. */
 const SEARCH_DEBOUNCE_MS = 300;
@@ -21,6 +32,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 export default function SalesQueue() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<ViewKey>("all");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
 
   // Debounce: the input updates on every keystroke, but the query term
   // only settles once typing pauses.
@@ -31,16 +44,36 @@ export default function SalesQueue() {
   }
 
   const { data, isPending, isError, error } = useQuery({
-    queryKey: ["enquiries", search],
-    queryFn: () => fetchEnquiries(search),
+    queryKey: ["enquiries", search, view],
+    queryFn: () =>
+      fetchEnquiries({
+        search,
+        unassigned: view === "unassigned",
+        overdue: view === "overdue",
+      }),
     // Keeps the old rows visible while a new search loads, instead of
     // flashing an empty table.
     placeholderData: keepPreviousData,
   });
 
+  const selected =
+    data?.results.find((enquiry) => enquiry.id === selectedId) ?? null;
+
   return (
     <main className={styles.page}>
       <h1>Enquiries</h1>
+
+      <div className={styles.views}>
+        {VIEWS.map((option) => (
+          <button
+            key={option.key}
+            className={option.key === view ? styles.viewActive : styles.view}
+            onClick={() => setView(option.key)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
       <div className={styles.toolbar}>
         <input
@@ -58,6 +91,8 @@ export default function SalesQueue() {
         )}
       </div>
 
+      <div className={selected ? styles.layoutSplit : styles.layout}>
+        <div className={styles.listArea}>
       {isPending && <p className={styles.state}>Loading enquiries…</p>}
 
       {isError && (
@@ -83,16 +118,30 @@ export default function SalesQueue() {
               <th>Site</th>
               <th>Wants</th>
               <th>Electricity</th>
-              <th>Received</th>
+              <th>Next action</th>
             </tr>
           </thead>
           <tbody>
             {data.results.map((enquiry) => (
-              <EnquiryRow key={enquiry.id} enquiry={enquiry} />
+              <EnquiryRow
+                key={enquiry.id}
+                enquiry={enquiry}
+                isSelected={enquiry.id === selectedId}
+                onSelect={() => setSelectedId(enquiry.id)}
+              />
             ))}
           </tbody>
         </table>
       )}
+        </div>
+
+        {selected && (
+          <FollowUpPanel
+            enquiry={selected}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+      </div>
     </main>
   );
 }
@@ -105,11 +154,24 @@ export default function SalesQueue() {
 /* Module-level so the timer survives re-renders. */
 let debounceTimer = 0;
 
-function EnquiryRow({ enquiry }: { enquiry: EnquiryListItem }) {
+function EnquiryRow({
+  enquiry,
+  isSelected,
+  onSelect,
+}: {
+  enquiry: EnquiryListItem;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
   const { site } = enquiry;
 
   return (
-    <tr>
+    <tr
+      onClick={onSelect}
+      className={isSelected ? styles.rowSelected : styles.row}
+      tabIndex={0}
+      onKeyDown={(event) => event.key === "Enter" && onSelect()}
+    >
       <td className={styles.reference}>{enquiry.reference}</td>
 
       <td>
@@ -147,7 +209,19 @@ function EnquiryRow({ enquiry }: { enquiry: EnquiryListItem }) {
         )}
       </td>
 
-      <td className={styles.muted}>{formatDate(enquiry.created_at)}</td>
+      <td>
+        {enquiry.next_action || (
+          <span className={styles.needsAction}>Nothing planned</span>
+        )}
+        {enquiry.next_action_due && (
+          <div className={enquiry.is_overdue ? styles.overdue : styles.muted}>
+            due {enquiry.next_action_due}
+          </div>
+        )}
+        <div className={styles.muted}>
+          {enquiry.owner_name || "unassigned"}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -158,11 +232,3 @@ function describeSystemType(type: EnquiryListItem["requested_system_type"]) {
   return "Not decided";
 }
 
-/* Shows the business timezone, not the viewer's. */
-function formatDate(isoTimestamp: string) {
-  return new Date(isoTimestamp).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}

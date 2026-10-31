@@ -31,6 +31,10 @@ ALLOWED_UPLOAD_TYPES = ["application/pdf", "image/jpeg", "image/png"]
 DEFAULT_PAGE_SIZE = 25                                       # rows per page
 MAX_PAGE_SIZE = 100                                          # hard ceiling
 
+# How often one anonymous client may submit the public enquiry form.
+# Raise it in .env for demos: every local submission shares one IP.
+PUBLIC_ENQUIRY_RATE = os.getenv("PUBLIC_ENQUIRY_RATE", "20/hour")
+
 
 # ============================================================
 # 2. Environment — differs per machine, comes from .env
@@ -92,6 +96,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": DEFAULT_PAGE_SIZE,
+    "DEFAULT_THROTTLE_RATES": {"public_enquiry": PUBLIC_ENQUIRY_RATE},
 }
 
 

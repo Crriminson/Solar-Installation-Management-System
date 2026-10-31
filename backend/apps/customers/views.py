@@ -31,9 +31,15 @@ from .serializers import (
 
 
 class PublicEnquiryThrottle(AnonRateThrottle):
-    """Limits how often one anonymous client can submit the form."""
+    """
+    Limits how often one anonymous client can submit the form.
 
-    rate = "20/hour"
+    The rate lives in settings so it can be raised for a demo without
+    touching code. All local submissions share one IP, so the default
+    is easy to hit while testing.
+    """
+
+    scope = "public_enquiry"
 
 
 class EnquiryCreateView(generics.CreateAPIView):

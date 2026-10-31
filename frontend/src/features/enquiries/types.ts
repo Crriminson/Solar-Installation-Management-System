@@ -26,11 +26,40 @@ export interface EnquiryCreated {
 }
 
 /* One row in the sales queue. */
+export type EnquiryStatus =
+  | "new"
+  | "contacting"
+  | "qualified"
+  | "survey_scheduled"
+  | "lost";
+
+export type ContactChannel =
+  | "phone"
+  | "whatsapp"
+  | "email"
+  | "site_visit"
+  | "other";
+
+export interface ContactLogEntry {
+  id: number;
+  staff_name: string;
+  channel: ContactChannel;
+  contacted_at: string;
+  summary: string;
+  reached_customer: boolean;
+}
+
 export interface EnquiryListItem {
   id: number;
   reference: string;
   source: string;
-  status: string;
+  status: EnquiryStatus;
+  owner: number | null;
+  owner_name: string;
+  next_action: string;
+  next_action_due: string | null;
+  is_overdue: boolean;
+  lost_reason: string;
   requested_system_type: SystemType;
   requested_capacity_kw: string | null;
   monthly_bill_amount: string | null;
