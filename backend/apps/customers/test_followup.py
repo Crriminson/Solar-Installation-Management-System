@@ -173,6 +173,25 @@ class FollowUpApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_a_lead_cannot_be_given_to_someone_who_has_left(self):
+        leaver = User.objects.create_user(
+            username="gone", password="x", is_active_staff=False
+        )
+
+        response = self.client.patch(
+            reverse("enquiry-assign", args=[self.enquiry.id]),
+            {"owner": leaver.id, "next_action": "Call"},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+    def test_the_queue_reports_which_moves_are_open(self):
+        """Screens read this rather than keeping their own copy of the rules."""
+        row = self.client.get(reverse("enquiry-list")).json()["results"][0]
+
+        self.assertEqual(row["next_statuses"], ["contacting", "lost"])
+
     def test_illegal_status_jump_returns_400_with_an_explanation(self):
         response = self.client.post(
             reverse("enquiry-status", args=[self.enquiry.id]),

@@ -1,170 +1,100 @@
-/* Follow-up panel, shown beside the queue. */
-
-.panel {
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  padding: var(--space-4);
-  min-width: 0;
-}
+/* Follow-up panel for one enquiry. The frame comes from SidePanel. */
 
 .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
+  padding-right: var(--space-5);    /* clear of the close button */
 }
 
 .title {
   margin: 0;
   font-size: var(--text-lg);
-  font-variant-numeric: tabular-nums;
 }
 
 .subtitle {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-1) 0 var(--space-2);
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
-}
-
-.close {
-  font: inherit;
-  font-size: var(--text-xl);
-  line-height: 1;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--color-text-muted);
-  padding: 0 var(--space-1);
 }
 
 .section {
-  padding-bottom: var(--space-4);
-  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border);
 }
 
 .section:last-child {
   border-bottom: none;
+  margin-bottom: 0;
 }
 
 .sectionTitle {
   font-size: var(--text-base);
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
-/* Current state */
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+/* Facts about the enquiry. */
 .facts {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 96px minmax(0, 1fr);
   gap: var(--space-2) var(--space-3);
   margin: 0;
 }
 
 .facts dt {
-  color: var(--color-text-muted);
   font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .facts dd {
   margin: 0;
-  min-width: 0;
-  overflow-wrap: break-word;
-}
-
-.warn {
-  color: var(--color-warning);
-}
-
-.overdue {
-  color: var(--color-danger);
+  overflow-wrap: anywhere;
 }
 
 .muted {
-  color: var(--color-text-muted);
+  margin: 0;
   font-size: var(--text-sm);
-}
-
-.lost {
-  margin-top: var(--space-3);
-  padding: var(--space-2);
-  border-left: 3px solid var(--color-text-muted);
   color: var(--color-text-muted);
 }
 
-/* Forms */
-.row {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.input,
-.select,
-.date,
-.textarea {
-  font: inherit;
-  color: inherit;
-  padding: var(--space-2);
-  border: 1px solid var(--color-border);
+.notice {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--tone-waiting-text);
+  background: var(--tone-waiting-bg);
   border-radius: var(--radius);
-  background: var(--color-surface);
-  min-width: 0;
-}
-
-.input {
-  flex: 1;
-}
-
-.textarea {
-  width: 100%;
-  min-height: 70px;
-  resize: vertical;
-  margin-bottom: var(--space-2);
 }
 
 .checkbox {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.button {
-  font: inherit;
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius);
-  background: var(--color-primary);
-  color: #fff;
-  cursor: pointer;
-}
-
-.button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  min-height: var(--control-height);
 }
 
 .error {
-  color: var(--color-danger);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
-  margin: var(--space-2) 0;
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  border-radius: var(--radius);
 }
 
 /* History */
 .history {
-  list-style: none;
   margin: 0;
   padding: 0;
+  list-style: none;
 }
 
 .historyItem {
-  padding: var(--space-3) 0;
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -174,17 +104,18 @@
 
 .historyHead {
   display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
   flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 
 .historyBody {
   margin: var(--space-1) 0;
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
 .noAnswer {
   font-size: var(--text-sm);
-  color: var(--color-warning);
+  font-weight: 600;
+  color: var(--tone-waiting-text);
 }

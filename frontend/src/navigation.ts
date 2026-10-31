@@ -16,7 +16,12 @@ export interface NavSection {
   items: readonly NavItem[];
 }
 
+/* In workflow order, not alphabetical. */
 export const NAV_SECTIONS: readonly NavSection[] = [
+  {
+    title: "",
+    items: [{ label: "My work", to: "/work", roles: [] }],
+  },
   {
     title: "Sales",
     items: [
@@ -29,4 +34,4 @@ export const NAV_SECTIONS: readonly NavSection[] = [
   },
 ];
 
-export const HOME_PATH = "/enquiries";
+export const HOME_PATH = "/work";

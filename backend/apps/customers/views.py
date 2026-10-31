@@ -181,7 +181,11 @@ class EnquiryAssignView(APIView):
 
         from django.contrib.auth import get_user_model
 
-        owner = get_user_model().objects.filter(pk=data["owner"]).first()
+        # Only current staff, so a lead cannot be handed to someone who
+        # has left and then wait for them forever.
+        owner = get_user_model().objects.filter(
+            pk=data["owner"], is_active=True, is_active_staff=True
+        ).first()
         if owner is None:
             return Response(
                 {"owner": ["No staff member with that id."]},

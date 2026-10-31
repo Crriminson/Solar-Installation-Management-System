@@ -10,6 +10,7 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
+    ALLOWED_STATUS_CHANGES,
     ContactChannel,
     ContactLog,
     Customer,
@@ -56,6 +57,7 @@ class EnquiryListSerializer(serializers.ModelSerializer):
     )
     is_overdue = serializers.BooleanField(read_only=True)
     has_electricity_bill = serializers.SerializerMethodField()
+    next_statuses = serializers.SerializerMethodField()
 
     class Meta:
         model = Enquiry
@@ -69,7 +71,7 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             "is_possible_duplicate", "created_at",
             # follow-up (F02)
             "owner", "owner_name", "next_action", "next_action_due",
-            "is_overdue", "lost_reason",
+            "is_overdue", "lost_reason", "next_statuses",
         ]
 
     def get_is_possible_duplicate(self, enquiry) -> bool:
@@ -77,6 +79,10 @@ class EnquiryListSerializer(serializers.ModelSerializer):
 
     def get_has_electricity_bill(self, enquiry) -> bool:
         return bool(enquiry.electricity_bill)
+
+    def get_next_statuses(self, enquiry) -> list:
+        """The moves open from here, so a screen never repeats the rules."""
+        return list(ALLOWED_STATUS_CHANGES.get(enquiry.status, []))
 
 
 # ============================================================

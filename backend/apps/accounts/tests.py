@@ -117,6 +117,23 @@ class LoginThrottleTests(TestCase):
         self.assertEqual(codes[-1], 429)
 
 
+class StaffListTests(TestCase):
+    def setUp(self):
+        self.url = reverse("staff-list")
+        User.objects.create_user("priya", password=PASSWORD, first_name="Priya")
+        User.objects.create_user("gone", password=PASSWORD, is_active_staff=False)
+
+    def test_staff_list_requires_login(self):
+        self.assertIn(self.client.get(self.url).status_code, [401, 403])
+
+    def test_someone_who_has_left_cannot_be_chosen(self):
+        self.client.login(username="priya", password=PASSWORD)
+
+        names = [person["name"] for person in self.client.get(self.url).json()]
+
+        self.assertEqual(names, ["Priya"])
+
+
 class RoleTests(TestCase):
     def test_a_superuser_holds_every_role(self):
         """Otherwise the first account made on a new install can do nothing."""

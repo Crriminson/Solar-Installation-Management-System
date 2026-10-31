@@ -45,6 +45,11 @@ export type ContactChannel =
   | "site_visit"
   | "other";
 
+export interface StaffMember {
+  id: number;
+  name: string;
+}
+
 export interface ContactLogEntry {
   id: number;
   staff_name: string;
@@ -65,6 +70,7 @@ export interface EnquiryListItem {
   next_action_due: string | null;
   is_overdue: boolean;
   lost_reason: string;
+  next_statuses: EnquiryStatus[];
   requested_system_type: SystemType;
   requested_capacity_kw: string | null;
   electricity_connection_number: string;

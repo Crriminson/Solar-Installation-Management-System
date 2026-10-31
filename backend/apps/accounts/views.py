@@ -7,9 +7,10 @@ rather than a token. See spec.md section 3.
     GET  /api/v1/auth/session/   who is signed in, and sets the CSRF cookie
     POST /api/v1/auth/login/     public, rate limited
     POST /api/v1/auth/logout/
+    GET  /api/v1/staff/          current staff, for choosing an owner
 """
 
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
 from rest_framework import serializers, status
@@ -100,3 +101,23 @@ class LogoutView(APIView):
     def post(self, request):
         logout(request._request)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class StaffListView(APIView):
+    """
+    Everyone who can be given work.
+
+    A short list used to fill a picker, so it is not paginated. Holds
+    names only: no contact details, and nothing about roles.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        staff = get_user_model().objects.filter(
+            is_active=True, is_active_staff=True
+        ).order_by("first_name", "last_name", "id")
+
+        return Response(
+            [{"id": user.id, "name": user.get_full_name() or user.username} for user in staff]
+        )

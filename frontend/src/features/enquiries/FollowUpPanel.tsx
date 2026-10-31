@@ -1,47 +1,82 @@
 /*
   Follow-up panel for one enquiry (F02).
 
-  Everything sales does to a lead, in one place: see the history, record
-  a call, move the lead on.
+  Everything sales does to a lead, in one place: see what it is, give it
+  an owner, record a call, move it on.
 
-  Two rules come from the server and are mirrored here so the form asks
-  for the right thing rather than letting the user discover it from an
-  error: losing a lead needs a reason, and every other move needs a
-  next action.
+  The server sends the moves open from the current status, so this
+  screen offers only legal ones without keeping its own copy of the
+  rules. It still asks for what each move needs, so people are not left
+  to discover a rule from an error: losing a lead needs a reason, and
+  every other move needs a next action with a date.
 */
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { changeStatus, fetchContactLog, recordContact } from "./api";
+import { describeError } from "../../api/client";
+import Button from "../../components/Button";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import {
+  SelectField,
+  TextAreaField,
+  TextField,
+} from "../../components/Field";
+import Reference from "../../components/Reference";
+import SidePanel from "../../components/SidePanel";
+import StatusBadge from "../../components/StatusBadge";
+import StatusPath from "../../components/StatusPath";
+import { ENQUIRY_STATUSES } from "../../components/status";
+import {
+  dateTimeInputToIso,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatPhone,
+  formatQuantity,
+  nowForDateTimeInput,
+} from "../../lib/format";
+import {
+  assignEnquiry,
+  billDownloadUrl,
+  changeStatus,
+  fetchContactLog,
+  fetchStaff,
+  recordContact,
+} from "./api";
+import NextStep from "./NextStep";
 import type { EnquiryListItem, EnquiryStatus } from "./types";
-import { ApiError } from "../../api/client";
 import styles from "./FollowUpPanel.module.css";
 
-/* Which statuses may follow the current one. Mirrors the server map. */
-const NEXT_STATUSES: Record<EnquiryStatus, EnquiryStatus[]> = {
-  new: ["contacting", "lost"],
-  contacting: ["qualified", "lost"],
-  qualified: ["survey_scheduled", "lost"],
-  survey_scheduled: ["lost"],
-  lost: [],
+const STAGES = [
+  { key: "new", label: "New" },
+  { key: "contacting", label: "Contacting" },
+  { key: "qualified", label: "Qualified" },
+  { key: "survey_scheduled", label: "Survey scheduled" },
+];
+
+/* What sales should have in hand before moving on. Spec.md, F02. */
+const STAGE_GUIDANCE: Record<string, string> = {
+  new: "Reach the customer and give this lead an owner.",
+  contacting:
+    "Before qualifying: roof, consumption, grid connection, requirements, documents.",
+  qualified: "Book the site survey with the customer.",
+  survey_scheduled: "Waiting on the site survey.",
 };
 
-const STATUS_LABELS: Record<EnquiryStatus, string> = {
-  new: "New",
-  contacting: "Contacting",
-  qualified: "Qualified",
-  survey_scheduled: "Survey scheduled",
-  lost: "Lost",
-};
-
-const CHANNELS = [
+const CHANNEL_OPTIONS = [
   { value: "phone", label: "Phone call" },
   { value: "whatsapp", label: "WhatsApp" },
   { value: "email", label: "Email" },
   { value: "site_visit", label: "Site visit" },
   { value: "other", label: "Other" },
 ];
+
+const SYSTEM_TYPE_LABELS: Record<string, string> = {
+  on_grid: "On-grid",
+  off_grid: "Off-grid",
+  undecided: "Not decided",
+};
 
 interface Props {
   enquiry: EnquiryListItem;
@@ -56,65 +91,211 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
     queryClient.invalidateQueries({ queryKey: ["contacts", enquiry.id] });
   }
 
+  const { customer } = enquiry.site;
+  const isOpen = enquiry.status !== "lost";
+
   return (
-    <aside className={styles.panel} aria-label={`Enquiry ${enquiry.reference}`}>
+    <SidePanel label={`Enquiry ${enquiry.reference}`} onClose={onClose}>
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>{enquiry.reference}</h2>
-          <p className={styles.subtitle}>
-            {enquiry.site.customer.full_name} · {enquiry.site.customer.phone}
-          </p>
-        </div>
-        <button className={styles.close} onClick={onClose} aria-label="Close">
-          ×
-        </button>
+        <h2 className={styles.title}>
+          <Reference>{enquiry.reference}</Reference>
+        </h2>
+        <p className={styles.subtitle}>
+          {customer.full_name} · {formatPhone(customer.phone)}
+        </p>
+        <StatusBadge status={ENQUIRY_STATUSES[enquiry.status]} />
       </header>
 
-      <CurrentState enquiry={enquiry} />
+      {isOpen && (
+        <StatusPath
+          stages={STAGES}
+          current={enquiry.status}
+          guidance={STAGE_GUIDANCE[enquiry.status]}
+        />
+      )}
 
-      {enquiry.status !== "lost" && (
+      <Details enquiry={enquiry} />
+
+      {isOpen && (
         <>
+          <OwnerForm enquiry={enquiry} onDone={refreshEverything} />
           <LogContactForm enquiry={enquiry} onDone={refreshEverything} />
-          <ChangeStatusForm enquiry={enquiry} onDone={refreshEverything} />
+          {/* Keyed on status: the choices change after each move, so the
+              form must start again rather than keep a stale selection. */}
+          <ChangeStatusForm
+            key={enquiry.status}
+            enquiry={enquiry}
+            onDone={refreshEverything}
+          />
         </>
       )}
 
       <ContactHistory enquiryId={enquiry.id} />
-    </aside>
+    </SidePanel>
   );
 }
 
 
 // ============================================================
-// Current state
+// What this enquiry is
 // ============================================================
 
-function CurrentState({ enquiry }: { enquiry: EnquiryListItem }) {
+function Details({ enquiry }: { enquiry: EnquiryListItem }) {
+  const { site } = enquiry;
+
   return (
     <section className={styles.section}>
       <dl className={styles.facts}>
-        <dt>Status</dt>
-        <dd>{STATUS_LABELS[enquiry.status]}</dd>
-
-        <dt>Owner</dt>
-        <dd>{enquiry.owner_name || <span className={styles.warn}>Nobody yet</span>}</dd>
-
-        <dt>Next action</dt>
+        <dt>Next step</dt>
         <dd>
-          {enquiry.next_action || <span className={styles.warn}>None planned</span>}
-          {enquiry.next_action_due && (
-            <span className={enquiry.is_overdue ? styles.overdue : styles.muted}>
-              {" "}
-              due {enquiry.next_action_due}
-              {enquiry.is_overdue && " — overdue"}
-            </span>
+          <NextStep enquiry={enquiry} />
+        </dd>
+
+        <dt>Site</dt>
+        <dd>
+          {site.address_line}, {site.city}, {site.state} {site.pincode}
+          {site.shadow_free_roof_area_sqm && (
+            <div className={styles.muted}>
+              {formatQuantity(site.shadow_free_roof_area_sqm, "m²")} shadow-free
+            </div>
           )}
         </dd>
+
+        <dt>Wants</dt>
+        <dd>
+          {SYSTEM_TYPE_LABELS[enquiry.requested_system_type]}
+          {enquiry.requested_capacity_kw &&
+            `, ${formatQuantity(enquiry.requested_capacity_kw, "kW")}`}
+        </dd>
+
+        {/* Bill and units are shown separately. Neither implies the
+            other, so we never display one in place of a missing other. */}
+        <dt>Bill</dt>
+        <dd>
+          {enquiry.monthly_bill_amount
+            ? `${formatMoney(enquiry.monthly_bill_amount)} a month`
+            : "Not given"}
+          {enquiry.billing_period_start && enquiry.billing_period_end && (
+            <div className={styles.muted}>
+              {formatDate(enquiry.billing_period_start)} to{" "}
+              {formatDate(enquiry.billing_period_end)}
+            </div>
+          )}
+          {enquiry.has_electricity_bill && (
+            <div>
+              <a href={billDownloadUrl(enquiry.id)}>Download bill</a>
+            </div>
+          )}
+        </dd>
+
+        <dt>Units</dt>
+        <dd>
+          {enquiry.monthly_consumption_kwh
+            ? `${formatQuantity(enquiry.monthly_consumption_kwh, "kWh")} a month`
+            : "Not given"}
+        </dd>
+
+        {enquiry.electricity_connection_number && (
+          <>
+            <dt>Connection</dt>
+            <dd>
+              <Reference>{enquiry.electricity_connection_number}</Reference>
+            </dd>
+          </>
+        )}
+
+        {enquiry.notes && (
+          <>
+            <dt>Notes</dt>
+            <dd>{enquiry.notes}</dd>
+          </>
+        )}
+
+        <dt>Received</dt>
+        <dd>{formatDateTime(enquiry.created_at)}</dd>
       </dl>
 
-      {enquiry.status === "lost" && enquiry.lost_reason && (
-        <p className={styles.lost}>Lost: {enquiry.lost_reason}</p>
+      {enquiry.is_possible_duplicate && (
+        <p className={styles.notice}>
+          Another customer has this phone number. Check whether they are the
+          same person.
+        </p>
       )}
+
+      {enquiry.lost_reason && (
+        <p className={styles.notice}>Lost: {enquiry.lost_reason}</p>
+      )}
+    </section>
+  );
+}
+
+
+// ============================================================
+// Give it an owner
+// ============================================================
+
+function OwnerForm({
+  enquiry,
+  onDone,
+}: {
+  enquiry: EnquiryListItem;
+  onDone: () => void;
+}) {
+  const staff = useQuery({ queryKey: ["staff"], queryFn: fetchStaff });
+
+  const [owner, setOwner] = useState(enquiry.owner ? String(enquiry.owner) : "");
+  const [nextAction, setNextAction] = useState(enquiry.next_action);
+  const [due, setDue] = useState(enquiry.next_action_due ?? "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      assignEnquiry(enquiry.id, {
+        owner: Number(owner),
+        next_action: nextAction,
+        next_action_due: due || null,
+      }),
+    onSuccess: onDone,
+  });
+
+  const options = (staff.data ?? []).map((person) => ({
+    value: String(person.id),
+    label: person.name,
+  }));
+
+  return (
+    <section className={styles.section}>
+      <h3 className={styles.sectionTitle}>Owner and next action</h3>
+
+      <form
+        className={styles.form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          mutation.mutate();
+        }}
+      >
+        <SelectField
+          label="Owner"
+          value={owner}
+          onChange={setOwner}
+          options={options}
+          placeholder="Choose someone"
+        />
+        <TextField label="Next action" value={nextAction} onChange={setNextAction} />
+        <TextField label="Due" type="date" value={due} onChange={setDue} />
+
+        {mutation.isError && (
+          <p className={styles.error} role="alert">
+            {describeError(mutation.error)}
+          </p>
+        )}
+
+        <Button
+          type="submit"
+          disabled={!owner || !nextAction.trim() || !due || mutation.isPending}
+        >
+          {mutation.isPending ? "Saving…" : "Save owner"}
+        </Button>
+      </form>
     </section>
   );
 }
@@ -134,20 +315,22 @@ function LogContactForm({
   const [channel, setChannel] = useState("phone");
   const [summary, setSummary] = useState("");
   const [reached, setReached] = useState(true);
+  const [contactedAt, setContactedAt] = useState(nowForDateTimeInput);
 
   const mutation = useMutation({
     mutationFn: () =>
       recordContact(enquiry.id, {
         channel,
-        // The server also stores when this was typed; these differ
-        // when someone logs a call after the fact.
-        contacted_at: new Date().toISOString(),
+        // When it happened, which may be earlier than now if the call
+        // is being logged after the fact. The server keeps both.
+        contacted_at: dateTimeInputToIso(contactedAt),
         summary,
         reached_customer: reached,
       }),
     onSuccess: () => {
       setSummary("");
       setReached(true);
+      setContactedAt(nowForDateTimeInput());
       onDone();
     },
   });
@@ -157,54 +340,53 @@ function LogContactForm({
       <h3 className={styles.sectionTitle}>Record a contact</h3>
 
       <form
+        className={styles.form}
         onSubmit={(event) => {
           event.preventDefault();
           mutation.mutate();
         }}
       >
-        <div className={styles.row}>
-          <select
-            className={styles.select}
-            value={channel}
-            onChange={(event) => setChannel(event.target.value)}
-            aria-label="How you contacted them"
-          >
-            {CHANNELS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <SelectField
+          label="How"
+          value={channel}
+          onChange={setChannel}
+          options={CHANNEL_OPTIONS}
+        />
+        <TextField
+          label="When"
+          type="datetime-local"
+          value={contactedAt}
+          onChange={setContactedAt}
+        />
 
-          {/* An unanswered call is still history worth keeping. */}
-          <label className={styles.checkbox}>
-            <input
-              type="checkbox"
-              checked={reached}
-              onChange={(event) => setReached(event.target.checked)}
-            />
-            Reached them
-          </label>
-        </div>
+        {/* An unanswered call is still history worth keeping. */}
+        <label className={styles.checkbox}>
+          <input
+            type="checkbox"
+            checked={reached}
+            onChange={(event) => setReached(event.target.checked)}
+          />
+          Reached the customer
+        </label>
 
-        <textarea
-          className={styles.textarea}
+        <TextAreaField
+          label="What was said, or why there was no answer"
           value={summary}
-          onChange={(event) => setSummary(event.target.value)}
-          placeholder="What was said, or why there was no answer"
-          aria-label="Summary"
+          onChange={setSummary}
         />
 
         {mutation.isError && (
-          <p className={styles.error}>{describeError(mutation.error)}</p>
+          <p className={styles.error} role="alert">
+            {describeError(mutation.error)}
+          </p>
         )}
 
-        <button
-          className={styles.button}
-          disabled={!summary.trim() || mutation.isPending}
+        <Button
+          type="submit"
+          disabled={!summary.trim() || !contactedAt || mutation.isPending}
         >
           {mutation.isPending ? "Saving…" : "Save contact"}
-        </button>
+        </Button>
       </form>
     </section>
   );
@@ -222,11 +404,12 @@ function ChangeStatusForm({
   enquiry: EnquiryListItem;
   onDone: () => void;
 }) {
-  const options = NEXT_STATUSES[enquiry.status];
+  const options = enquiry.next_statuses;
   const [target, setTarget] = useState<EnquiryStatus>(options[0]);
   const [nextAction, setNextAction] = useState("");
   const [due, setDue] = useState("");
   const [reason, setReason] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   const losing = target === "lost";
 
@@ -236,81 +419,93 @@ function ChangeStatusForm({
         status: target,
         reason: losing ? reason : "",
         next_action: losing ? "" : nextAction,
-        next_action_due: losing || !due ? null : due,
+        next_action_due: losing ? null : due,
       }),
-    onSuccess: () => {
-      setNextAction("");
-      setDue("");
-      setReason("");
-      onDone();
-    },
+    onSuccess: onDone,
   });
 
-  if (options.length === 0) return null;
+  const canSubmit = losing
+    ? reason.trim().length > 0
+    : nextAction.trim().length > 0 && Boolean(due);
 
-  const canSubmit = losing ? reason.trim().length > 0 : nextAction.trim().length > 0;
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+    // Losing a lead cannot be undone, so it is confirmed first.
+    if (losing) setConfirming(true);
+    else mutation.mutate();
+  }
+
+  const targetLabel = ENQUIRY_STATUSES[target].label;
 
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>Move this lead on</h3>
 
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          mutation.mutate();
-        }}
-      >
-        <div className={styles.row}>
-          <select
-            className={styles.select}
-            value={target}
-            onChange={(event) => setTarget(event.target.value as EnquiryStatus)}
-            aria-label="New status"
-          >
-            {options.map((option) => (
-              <option key={option} value={option}>
-                {STATUS_LABELS[option]}
-              </option>
-            ))}
-          </select>
-        </div>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <SelectField
+          label="New status"
+          value={target}
+          onChange={(value) => setTarget(value as EnquiryStatus)}
+          options={options.map((option) => ({
+            value: option,
+            label: ENQUIRY_STATUSES[option].label,
+          }))}
+        />
 
         {/* Losing a lead without a reason teaches the business nothing. */}
         {losing ? (
-          <textarea
-            className={styles.textarea}
+          <TextAreaField
+            label="Why was this lead lost?"
+            required
             value={reason}
-            onChange={(event) => setReason(event.target.value)}
-            placeholder="Why was this lead lost?"
-            aria-label="Reason lost"
+            onChange={setReason}
           />
         ) : (
-          <div className={styles.row}>
-            <input
-              className={styles.input}
+          <>
+            <TextField
+              label="What happens next"
+              required
               value={nextAction}
-              onChange={(event) => setNextAction(event.target.value)}
-              placeholder="What happens next"
-              aria-label="Next action"
+              onChange={setNextAction}
             />
-            <input
-              className={styles.date}
+            <TextField
+              label="Due"
+              required
               type="date"
               value={due}
-              onChange={(event) => setDue(event.target.value)}
-              aria-label="Next action due"
+              onChange={setDue}
             />
-          </div>
+          </>
         )}
 
-        {mutation.isError && (
-          <p className={styles.error}>{describeError(mutation.error)}</p>
+        {mutation.isError && !confirming && (
+          <p className={styles.error} role="alert">
+            {describeError(mutation.error)}
+          </p>
         )}
 
-        <button className={styles.button} disabled={!canSubmit || mutation.isPending}>
-          {mutation.isPending ? "Saving…" : `Mark ${STATUS_LABELS[target].toLowerCase()}`}
-        </button>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={!canSubmit || mutation.isPending}
+        >
+          {mutation.isPending ? "Saving…" : `Mark as ${targetLabel.toLowerCase()}`}
+        </Button>
       </form>
+
+      {confirming && (
+        <ConfirmDialog
+          title={`Mark ${enquiry.reference} as lost?`}
+          confirmLabel="Mark as lost"
+          danger
+          pending={mutation.isPending}
+          error={mutation.isError ? describeError(mutation.error) : null}
+          onConfirm={() => mutation.mutate()}
+          onCancel={() => setConfirming(false)}
+        >
+          The lead closes and leaves the sales queue. It cannot be reopened.
+        </ConfirmDialog>
+      )}
     </section>
   );
 }
@@ -342,14 +537,12 @@ function ContactHistory({ enquiryId }: { enquiryId: number }) {
             <div className={styles.historyHead}>
               <strong>{channelLabel(entry.channel)}</strong>
               {!entry.reached_customer && (
-                <span className={styles.noAnswer}>no answer</span>
+                <span className={styles.noAnswer}>No answer</span>
               )}
               <span className={styles.muted}>{formatDateTime(entry.contacted_at)}</span>
             </div>
             <p className={styles.historyBody}>{entry.summary}</p>
-            {entry.staff_name && (
-              <p className={styles.muted}>by {entry.staff_name}</p>
-            )}
+            {entry.staff_name && <p className={styles.muted}>By {entry.staff_name}</p>}
           </li>
         ))}
       </ul>
@@ -363,27 +556,5 @@ function ContactHistory({ enquiryId }: { enquiryId: number }) {
 // ============================================================
 
 function channelLabel(value: string) {
-  return CHANNELS.find((option) => option.value === value)?.label ?? value;
-}
-
-function formatDateTime(iso: string) {
-  return new Date(iso).toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
-/* Shows the server's explanation rather than a generic failure. */
-function describeError(error: unknown) {
-  if (error instanceof ApiError && error.details) {
-    const details = error.details as Record<string, unknown>;
-    if (typeof details.detail === "string") return details.detail;
-
-    const firstField = Object.values(details)[0];
-    if (Array.isArray(firstField) && typeof firstField[0] === "string") {
-      return firstField[0];
-    }
-  }
-  return "Could not save. Please try again.";
+  return CHANNEL_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }

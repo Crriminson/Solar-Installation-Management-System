@@ -12,6 +12,7 @@ import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
 import EnquiryForm from "./features/enquiries/EnquiryForm";
 import SalesQueue from "./features/enquiries/SalesQueue";
+import MyWorkPage from "./features/work/MyWorkPage";
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
 
       {/* Staff: inside the app frame, after signing in. */}
       <Route element={<RequireStaff />}>
+        <Route path="/work" element={<MyWorkPage />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
       </Route>
