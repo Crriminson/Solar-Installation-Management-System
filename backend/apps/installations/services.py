@@ -217,8 +217,8 @@ def _accept(report, data, actor):
     )
     _update(report, actor, "accepted", status=ReportStatus.ACCEPTED)
 
-    # The serials are now on a roof, not in a van. This is also what
-    # F12 will read to work out what each warranty covers.
+    # The serials are now on a roof, not in a van. Their warranties
+    # started at delivery (F12), so acceptance changes nothing about cover.
     for entry in report.installed_units.select_related("unit"):
         move_stock(actor, unit=entry.unit, to_status=StockStatus.INSTALLED,
                    reason=MovementReason.INSTALLATION, order=report.job.order)

@@ -23,6 +23,7 @@ from apps.core.models import record_event
 from apps.inventory.models import BatchLot, MovementReason, SerializedUnit, StockStatus
 from apps.inventory.services import move_stock
 from apps.orders.models import Order, OrderStatus
+from apps.warranties.services import issue_warranties
 
 from .models import (ALLOWED_FULFILMENT_MOVES, Fulfilment, FulfilmentStatus, PackingLine,
                      ScanEvent, ZERO)
@@ -386,6 +387,15 @@ def deliver(fulfilment_id, data, actor):
 
     order = Order.objects.select_for_update().get(pk=fulfilment.order_id)
 
+    # Every warranty starts from this date and none can be edited after,
+    # so an impossible one stops here. Not compared with dispatched_at:
+    # that is when dispatch was keyed in, which can be after a true
+    # delivery time if the warehouse catches up late (D052).
+    if delivered_at < order.confirmed_at:
+        raise ValidationError(
+            {"delivered_at": ["Delivery cannot be before the order was confirmed."]}
+        )
+
     for unit in _dispatched_units(fulfilment):
         move_stock(actor, unit=unit, to_status=StockStatus.DELIVERED,
                    reason=MovementReason.DELIVERY, order=order)
@@ -402,6 +412,9 @@ def deliver(fulfilment_id, data, actor):
           delivered_by=actor,
           received_by_name=data["received_by_name"].strip(),
           delivery_notes=data.get("delivery_notes", "").strip())
+
+    # Same transaction: a delivery with no cover behind it must not commit.
+    issue_warranties(fulfilment, actor)
 
     # The balance falls due now, not at installation acceptance (D024).
     Order.objects.filter(pk=order.pk).update(

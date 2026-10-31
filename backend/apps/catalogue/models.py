@@ -101,6 +101,11 @@ SIZED_KINDS = [PackageKind.ON_GRID, PackageKind.OFF_GRID]
 # Warranty policy and sizing defaults
 # ============================================================
 
+# What a customer is promised. Changing any of these makes a new version
+# of the policy (D015); renaming it does not.
+WARRANTY_TERM_FIELDS = ("duration_months", "conditions", "fresh_period_on_replacement")
+
+
 class WarrantyPolicy(models.Model):
     """
     Coverage a product is sold with.
@@ -110,15 +115,45 @@ class WarrantyPolicy(models.Model):
     """
 
     name = models.CharField(max_length=100, unique=True)
-    duration_months = models.PositiveIntegerField()
+    version = models.PositiveIntegerField(default=1, editable=False)
+    duration_months = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     conditions = models.TextField(blank=True)
+
+    # Off means a replacement inherits what was left on the original
+    # (D020), which is what stops a swap extending cover for ever.
+    fresh_period_on_replacement = models.BooleanField(
+        default=False,
+        help_text="A replacement gets a full new term instead of the remaining cover.",
+    )
 
     class Meta:
         ordering = ["name"]
         verbose_name_plural = "warranty policies"
+        constraints = [
+            # A zero-month warranty is no warranty, and would only surface
+            # when a delivery failed on it.
+            models.CheckConstraint(
+                condition=models.Q(duration_months__gt=0),
+                name="warranty_policy_has_a_term",
+            ),
+        ]
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        self._set_version()
+        super().save(*args, **kwargs)
+
+    def _set_version(self):
+        """Judges by the stored row, so a stale copy cannot skip a version."""
+        stored = (WarrantyPolicy.objects.filter(pk=self.pk)
+                  .values("version", *WARRANTY_TERM_FIELDS).first())
+        if stored is None:
+            return
+
+        changed = any(stored[name] != getattr(self, name) for name in WARRANTY_TERM_FIELDS)
+        self.version = stored["version"] + 1 if changed else stored["version"]
 
 
 class SizingDefaults(models.Model):

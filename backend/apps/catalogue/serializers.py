@@ -29,7 +29,7 @@ def _viewer_sees_costs(serializer):
 class WarrantyPolicySerializer(serializers.ModelSerializer):
     class Meta:
         model = WarrantyPolicy
-        fields = ["id", "name", "duration_months"]
+        fields = ["id", "name", "version", "duration_months"]
 
 
 class ProductPriceSerializer(serializers.ModelSerializer):

@@ -25,8 +25,9 @@ def check_revision(record, data):
         raise Conflict()
 
 
-def business_date():
-    return timezone.localdate(timezone=ZoneInfo(settings.BUSINESS_TIMEZONE))
+def business_date(moment=None):
+    """The Asia/Kolkata calendar date of a moment, or of right now."""
+    return timezone.localdate(moment, timezone=ZoneInfo(settings.BUSINESS_TIMEZONE))
 
 
 class StaffAccess(BasePermission):

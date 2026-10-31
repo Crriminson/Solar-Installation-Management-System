@@ -34,8 +34,13 @@ JSON = "application/json"
 SERIALIZED_SKUS = ["PANEL", "INV"]
 
 
-class FulfilmentTestCase(TestCase):
-    """Builds a paid, confirmed order with stock on the shelf behind it."""
+class FulfilmentFixture:
+    """
+    Builds a paid, confirmed order with stock on the shelf behind it.
+
+    A mixin so the concurrency tests in F12 can run the same journey on
+    a TransactionTestCase, where threads see each other's commits.
+    """
 
     def setUp(self):
         (self.admin, self.sales, self.technician,
@@ -155,6 +160,10 @@ class FulfilmentTestCase(TestCase):
                     product=line.product, order=self.order,
                     status=StockStatus.RESERVED).first()
                 self.scan(fulfilment, lot.batch_id, quantity=line.required_quantity)
+
+
+class FulfilmentTestCase(FulfilmentFixture, TestCase):
+    pass
 
 
 class ChecklistTests(FulfilmentTestCase):
