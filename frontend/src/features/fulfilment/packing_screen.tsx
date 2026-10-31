@@ -206,7 +206,8 @@ function LineRow({ line }: { line: PackingLine }) {
       <div className={styles.muted}>{line.sku} · {line.tracking_method}</div>
     </div>
     <div className={styles.counts}>
-      {formatQuantity(line.packed_quantity, line.unit)}
+      {/* The unit is said once: "6 of 6 piece", not "6 piece of 6 piece". */}
+      {line.packed_quantity}
       {" of "}
       {formatQuantity(line.required_quantity, line.unit)}
       {!line.is_complete && <div className={styles.outstanding}>
