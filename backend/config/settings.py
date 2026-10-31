@@ -82,6 +82,7 @@ OUR_APPS = [
     "apps.orders",
     "apps.inventory",
     "apps.fulfilment",
+    "apps.scheduling",
 ]
 
 INSTALLED_APPS = [

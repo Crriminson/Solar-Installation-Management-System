@@ -11,9 +11,12 @@ from .views import (
     EnquiryStatusView,
     DuplicateReviewView,
     EnquiryActivityView,
+    SiteListView,
 )
 
 urlpatterns = [
+    # F10 needs somewhere to send a crew.
+    path("sites/", SiteListView.as_view(), name="site-list"),
     path("enquiries/<int:pk>/duplicate-review/", DuplicateReviewView.as_view(), name="enquiry-duplicate-review"),
     path("enquiries/<int:pk>/activity/", EnquiryActivityView.as_view(), name="enquiry-activity"),
     # F01

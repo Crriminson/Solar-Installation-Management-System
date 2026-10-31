@@ -26,12 +26,12 @@ from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 
 from apps.accounts.models import Role
-from apps.core.api import SalesAccess, business_date, check_revision
+from apps.core.api import ActiveStaff, SalesAccess, business_date, check_revision
 from apps.core.models import AuditEvent, record_event
 from apps.core.serializers import AuditEventSerializer
 
 from .constants import NATIONAL_PHONE_DIGITS
-from .models import ContactLog, Enquiry, EnquirySource, OPEN_STATUSES
+from .models import ContactLog, Enquiry, EnquirySource, OPEN_STATUSES, Site
 from .serializers import (
     ContactLogSerializer,
     EnquiryAssignSerializer,
@@ -336,3 +336,25 @@ class EnquiryActivityView(generics.ListAPIView):
         pk = self.kwargs["pk"]
         get_object_or_404(Enquiry, pk=pk)
         return AuditEvent.objects.filter(record_type="customers.enquiry", record_id=pk).select_related("actor")
+
+
+class SiteListView(APIView):
+    """
+    Every site, to fill the picker when booking a visit (F10).
+
+    Short and unpaginated like the staff picker, and address-only: this
+    is for choosing where a crew is going, not for browsing customers.
+    """
+
+    permission_classes = [ActiveStaff]
+
+    def get(self, request):
+        sites = Site.objects.select_related("customer").order_by(
+            "customer__full_name", "id"
+        )
+        return Response([
+            {"id": site.id, "address_line": site.address_line, "city": site.city,
+             "state": site.state, "pincode": site.pincode,
+             "customer": site.customer_id, "customer_name": site.customer.full_name}
+            for site in sites
+        ])

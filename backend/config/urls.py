@@ -17,4 +17,5 @@ urlpatterns = [
     path("api/v1/", include("apps.orders.urls")),      # F07
     path("api/v1/", include("apps.inventory.urls")),   # F08
     path("api/v1/", include("apps.fulfilment.urls")),  # F09
+    path("api/v1/", include("apps.scheduling.urls")),  # F10
 ]

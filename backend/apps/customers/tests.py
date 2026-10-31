@@ -12,6 +12,8 @@ from django.test import TestCase
 from django.core.cache import cache
 from django.urls import reverse
 
+from apps.accounts.models import Role
+
 from .models import Customer, Enquiry, Site
 
 User = get_user_model()
@@ -213,3 +215,29 @@ class SalesQueuePermissionTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["count"], 0)
+
+
+class SitePickerTests(TestCase):
+    """F10 books crews onto sites, so the picker has to actually answer."""
+
+    def setUp(self):
+        cache.clear()
+        self.staff = User.objects.create_user("picker_staff", roles=[Role.OPERATIONS_MANAGER])
+        customer = Customer.objects.create(full_name="Ramesh Gupta", phone="9876543210")
+        Site.objects.create(customer=customer, address_line="14 Vikas Nagar",
+                            city="Lucknow", state="Uttar Pradesh", pincode="226022")
+
+    def test_the_picker_lists_sites_with_their_customer(self):
+        self.client.force_login(self.staff)
+
+        response = self.client.get(reverse("site-list"))
+
+        self.assertEqual(response.status_code, 200, response.content)
+        row = response.json()[0]
+        self.assertEqual(row["customer_name"], "Ramesh Gupta")
+        self.assertEqual(row["city"], "Lucknow")
+
+    def test_the_picker_needs_a_signed_in_staff_member(self):
+        response = self.client.get(reverse("site-list"))
+
+        self.assertIn(response.status_code, [401, 403])
