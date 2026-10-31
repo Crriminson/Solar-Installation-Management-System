@@ -9,6 +9,7 @@ not readable without logging in.
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
+from django.core.cache import cache
 from django.urls import reverse
 
 from .models import Customer, Enquiry, Site
@@ -36,6 +37,9 @@ class EnquirySubmissionTests(TestCase):
     """The public form at POST /api/v1/enquiries/submit/."""
 
     def setUp(self):
+        # The public endpoint is rate limited and DRF keeps its
+        # counters in the cache, which outlives a single test.
+        cache.clear()
         self.url = reverse("enquiry-create")
 
     def test_submission_creates_all_three_records(self):
@@ -130,6 +134,9 @@ class DuplicatePhoneTests(TestCase):
     """A repeat phone number is a flag for a human, never a rejection."""
 
     def setUp(self):
+        # The public endpoint is rate limited and DRF keeps its
+        # counters in the cache, which outlives a single test.
+        cache.clear()
         self.url = reverse("enquiry-create")
 
     def test_second_enquiry_on_same_phone_is_still_saved(self):
@@ -168,6 +175,9 @@ class SalesQueuePermissionTests(TestCase):
     """GET /api/v1/enquiries/ holds customer contact details."""
 
     def setUp(self):
+        # The public endpoint is rate limited and DRF keeps its
+        # counters in the cache, which outlives a single test.
+        cache.clear()
         self.url = reverse("enquiry-list")
         self.client.post(reverse("enquiry-create"), VALID_PAYLOAD)
 

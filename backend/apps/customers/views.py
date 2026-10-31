@@ -11,13 +11,23 @@ write to the database, so it is rate limited and accepts only the
 fields on the form.
 """
 
+from django.core.exceptions import ValidationError
+from django.db.models import Q
+from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
 
-from .models import Enquiry
-from .serializers import EnquiryCreateSerializer, EnquiryListSerializer
+from .models import ContactLog, Enquiry, OPEN_STATUSES
+from .serializers import (
+    ContactLogSerializer,
+    EnquiryAssignSerializer,
+    EnquiryCreateSerializer,
+    EnquiryListSerializer,
+    EnquiryStatusChangeSerializer,
+)
 
 
 class PublicEnquiryThrottle(AnonRateThrottle):
@@ -63,18 +73,145 @@ class EnquiryListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # select_related avoids one extra query per row for the site
-        # and its customer.
-        queryset = Enquiry.objects.select_related("site", "site__customer")
+        # select_related avoids one extra query per row for the site,
+        # its customer and the owner.
+        queryset = Enquiry.objects.select_related(
+            "site", "site__customer", "owner"
+        )
 
-        search = self.request.query_params.get("search", "").strip()
+        params = self.request.query_params
+
+        search = params.get("search", "").strip()
         if search:
-            from django.db.models import Q
-
             queryset = queryset.filter(
                 Q(reference__icontains=search)
                 | Q(site__customer__full_name__icontains=search)
                 | Q(site__customer__phone__icontains=search)
             )
 
+        if params.get("status"):
+            queryset = queryset.filter(status=params["status"])
+
+        # Manager views: the two ways a lead goes quiet.
+        if params.get("unassigned") == "true":
+            queryset = queryset.filter(owner__isnull=True, status__in=OPEN_STATUSES)
+
+        if params.get("overdue") == "true":
+            queryset = queryset.filter(
+                next_action_due__lt=timezone.localdate(),
+                status__in=OPEN_STATUSES,
+            )
+
         return queryset
+
+
+# ============================================================
+# Follow-up actions (F02)
+# ============================================================
+
+class EnquiryAssignView(APIView):
+    """
+    PATCH /api/v1/enquiries/<id>/assign/
+
+    Gives the enquiry an owner and a planned next action. Both at once,
+    deliberately: an owner with nothing scheduled is how a lead goes
+    quiet.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        enquiry = self._get_open_enquiry(pk)
+        if isinstance(enquiry, Response):
+            return enquiry
+
+        serializer = EnquiryAssignSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        from django.contrib.auth import get_user_model
+
+        owner = get_user_model().objects.filter(pk=data["owner"]).first()
+        if owner is None:
+            return Response(
+                {"owner": ["No staff member with that id."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        enquiry.owner = owner
+        enquiry.next_action = data["next_action"]
+        enquiry.next_action_due = data.get("next_action_due")
+        enquiry.save(update_fields=["owner", "next_action", "next_action_due"])
+
+        return Response(EnquiryListSerializer(enquiry).data)
+
+    def _get_open_enquiry(self, pk):
+        enquiry = Enquiry.objects.filter(pk=pk).first()
+        if enquiry is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        if not enquiry.is_open:
+            return Response(
+                {"detail": "This enquiry is closed."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        return enquiry
+
+
+class EnquiryStatusView(APIView):
+    """
+    POST /api/v1/enquiries/<id>/status/
+
+    Asks the model to move the enquiry on. The model owns the rules
+    about which moves are legal and what each one requires, so the same
+    checks apply however the change is triggered.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        enquiry = Enquiry.objects.filter(pk=pk).first()
+        if enquiry is None:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        serializer = EnquiryStatusChangeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        try:
+            enquiry.change_status(
+                data["status"],
+                reason=data.get("reason", ""),
+                next_action=data.get("next_action", ""),
+                next_action_due=data.get("next_action_due"),
+            )
+        except ValidationError as exc:
+            return Response(
+                {"detail": exc.messages[0]}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(EnquiryListSerializer(enquiry).data)
+
+
+class ContactLogListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/enquiries/<id>/contacts/   the history
+    POST /api/v1/enquiries/<id>/contacts/   record an attempt
+
+    An unanswered call is recorded too. Knowing someone tried three
+    times is the point of a contact history.
+    """
+
+    serializer_class = ContactLogSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return ContactLog.objects.filter(
+            enquiry_id=self.kwargs["pk"]
+        ).select_related("staff")
+
+    def perform_create(self, serializer):
+        # Staff comes from the session, never the request body, so one
+        # person cannot file a contact under someone else's name.
+        serializer.save(
+            enquiry_id=self.kwargs["pk"], staff=self.request.user
+        )

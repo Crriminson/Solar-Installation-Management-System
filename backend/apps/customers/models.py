@@ -13,7 +13,10 @@ number, and a suspected duplicate is flagged for a human rather than
 merged or dropped automatically.
 """
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models, transaction
+from django.utils import timezone
 
 from .constants import STATE_CHOICES
 
@@ -46,11 +49,43 @@ class EnquirySource(models.TextChoices):
 
 class EnquiryStatus(models.TextChoices):
     """
-    Only the entry state belongs to F01. Qualification and follow-up
-    states are added by F02.
+    How far an enquiry has travelled through sales.
+
+    Lost is reachable from any open state and always carries a reason.
     """
 
     NEW = "new", "New"
+    CONTACTING = "contacting", "Contacting"
+    QUALIFIED = "qualified", "Qualified"
+    SURVEY_SCHEDULED = "survey_scheduled", "Survey scheduled"
+    LOST = "lost", "Lost"
+
+
+# Which statuses may follow which. A transition not listed here is
+# rejected, so an enquiry cannot skip from New straight to Survey
+# Scheduled without anyone having spoken to the customer.
+ALLOWED_STATUS_CHANGES = {
+    EnquiryStatus.NEW: [EnquiryStatus.CONTACTING, EnquiryStatus.LOST],
+    EnquiryStatus.CONTACTING: [EnquiryStatus.QUALIFIED, EnquiryStatus.LOST],
+    EnquiryStatus.QUALIFIED: [EnquiryStatus.SURVEY_SCHEDULED, EnquiryStatus.LOST],
+    EnquiryStatus.SURVEY_SCHEDULED: [EnquiryStatus.LOST],
+    EnquiryStatus.LOST: [],
+}
+
+OPEN_STATUSES = [
+    EnquiryStatus.NEW,
+    EnquiryStatus.CONTACTING,
+    EnquiryStatus.QUALIFIED,
+    EnquiryStatus.SURVEY_SCHEDULED,
+]
+
+
+class ContactChannel(models.TextChoices):
+    PHONE = "phone", "Phone call"
+    WHATSAPP = "whatsapp", "WhatsApp"
+    EMAIL = "email", "Email"
+    SITE_VISIT = "site_visit", "Site visit"
+    OTHER = "other", "Other"
 
 
 # ============================================================
@@ -154,6 +189,24 @@ class Enquiry(models.Model):
 
     notes = models.TextField(blank=True)
 
+    # --- follow-up (F02) ---
+    # A lead must never sit unowned with nothing planned. Both are
+    # nullable only because a web submission arrives before anyone has
+    # picked it up; the manager queue exists to surface exactly that.
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="owned_enquiries",
+    )
+    next_action = models.CharField(max_length=200, blank=True)
+    next_action_due = models.DateField(null=True, blank=True)
+
+    # Why the lead was lost. Required when status becomes Lost.
+    lost_reason = models.TextField(blank=True)
+    closed_at = models.DateTimeField(null=True, blank=True)
+
     # Set when another customer already has this phone number. The
     # enquiry is still saved; a human decides whether they are the same
     # person. Never merge or discard automatically.
@@ -191,3 +244,89 @@ class Enquiry(models.Model):
             super().save(*args, **kwargs)
             self.reference = f"ENQ-{self.created_at.year}-{self.id:05d}"
             super().save(update_fields=["reference"])
+
+    # --- follow-up state (F02) ----------------------------------------
+
+    @property
+    def is_open(self):
+        return self.status in OPEN_STATUSES
+
+    @property
+    def is_overdue(self):
+        """True when the planned next action has passed its due date."""
+        if not self.next_action_due or not self.is_open:
+            return False
+        return self.next_action_due < timezone.localdate()
+
+    def change_status(self, new_status, *, reason="", next_action="",
+                      next_action_due=None):
+        """
+        Moves the enquiry to a new status, refusing invalid jumps.
+
+        Lost always needs a reason: a lead that disappears without one
+        teaches the business nothing. Any other open status needs a
+        planned next action, so nothing is left with no one due to do
+        anything.
+        """
+        allowed = ALLOWED_STATUS_CHANGES.get(self.status, [])
+        if new_status not in allowed:
+            raise ValidationError(
+                f"Cannot move an enquiry from {self.get_status_display()} "
+                f"to {EnquiryStatus(new_status).label}."
+            )
+
+        if new_status == EnquiryStatus.LOST:
+            if not reason.strip():
+                raise ValidationError("A lost enquiry needs a reason.")
+            self.lost_reason = reason.strip()
+            self.closed_at = timezone.now()
+            self.next_action = ""
+            self.next_action_due = None
+        else:
+            if not next_action.strip():
+                raise ValidationError(
+                    "Set what happens next before moving this enquiry on."
+                )
+            self.next_action = next_action.strip()
+            self.next_action_due = next_action_due
+
+        self.status = new_status
+        self.save()
+
+
+# ============================================================
+# Contact log
+# ============================================================
+
+class ContactLog(models.Model):
+    """
+    One recorded attempt to reach the customer about an enquiry.
+
+    Append-only. A call that went unanswered is as much a part of the
+    history as one that did not, so entries are never edited away.
+    """
+
+    enquiry = models.ForeignKey(
+        Enquiry, on_delete=models.PROTECT, related_name="contact_logs"
+    )
+    staff = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="contact_logs",
+    )
+    channel = models.CharField(max_length=20, choices=ContactChannel.choices)
+
+    # When the contact happened, which may differ from when it was
+    # typed in. Both are kept, per the time rule in spec.md section 6.
+    contacted_at = models.DateTimeField()
+    summary = models.TextField()
+    reached_customer = models.BooleanField(
+        default=True, help_text="False for a missed call or no reply."
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-contacted_at", "-id"]
+
+    def __str__(self):
+        return f"{self.enquiry.reference} - {self.get_channel_display()}"

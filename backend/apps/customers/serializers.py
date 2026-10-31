@@ -10,10 +10,13 @@ from django.db import transaction
 from rest_framework import serializers
 
 from .models import (
+    ContactChannel,
+    ContactLog,
     Customer,
     CustomerType,
     Enquiry,
     EnquirySource,
+    EnquiryStatus,
     Site,
     SystemType,
 )
@@ -47,6 +50,11 @@ class EnquiryListSerializer(serializers.ModelSerializer):
     site = SiteSerializer(read_only=True)
     is_possible_duplicate = serializers.SerializerMethodField()
 
+    owner_name = serializers.CharField(
+        source="owner.get_full_name", default="", read_only=True
+    )
+    is_overdue = serializers.BooleanField(read_only=True)
+
     class Meta:
         model = Enquiry
         fields = [
@@ -54,6 +62,9 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             "requested_system_type", "requested_capacity_kw",
             "monthly_consumption_kwh", "monthly_bill_amount",
             "is_possible_duplicate", "created_at",
+            # follow-up (F02)
+            "owner", "owner_name", "next_action", "next_action_due",
+            "is_overdue", "lost_reason",
         ]
 
     def get_is_possible_duplicate(self, enquiry) -> bool:
@@ -185,3 +196,59 @@ class EnquiryCreateSerializer(serializers.Serializer):
             possible_duplicate_of=existing_customer,
             **validated_data,
         )
+
+
+# ============================================================
+# Follow-up (F02)
+# ============================================================
+
+class ContactLogSerializer(serializers.ModelSerializer):
+    """A recorded contact attempt. The staff member comes from session."""
+
+    staff_name = serializers.CharField(
+        source="staff.get_full_name", default="", read_only=True
+    )
+
+    class Meta:
+        model = ContactLog
+        fields = [
+            "id", "enquiry", "staff", "staff_name", "channel",
+            "contacted_at", "summary", "reached_customer", "created_at",
+        ]
+        # enquiry comes from the URL and staff from the session, so
+        # neither is accepted from the request body.
+        read_only_fields = ["enquiry", "staff", "created_at"]
+
+    def validate_contacted_at(self, value):
+        """A contact cannot have happened in the future."""
+        from django.utils import timezone
+
+        if value > timezone.now():
+            raise serializers.ValidationError(
+                "A contact cannot be recorded in the future."
+            )
+        return value
+
+
+class EnquiryAssignSerializer(serializers.Serializer):
+    """Hands an enquiry to a named owner."""
+
+    owner = serializers.IntegerField()
+    next_action = serializers.CharField(max_length=200)
+    next_action_due = serializers.DateField(required=False, allow_null=True)
+
+
+class EnquiryStatusChangeSerializer(serializers.Serializer):
+    """
+    Requests a move to a new status.
+
+    The model decides whether the move is legal and what each target
+    requires; this only checks the shape of the request.
+    """
+
+    status = serializers.ChoiceField(choices=EnquiryStatus.choices)
+    reason = serializers.CharField(required=False, allow_blank=True, default="")
+    next_action = serializers.CharField(
+        max_length=200, required=False, allow_blank=True, default=""
+    )
+    next_action_due = serializers.DateField(required=False, allow_null=True)
