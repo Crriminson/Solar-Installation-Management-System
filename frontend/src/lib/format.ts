@@ -79,7 +79,11 @@ export function describeLateness(dueDate: string) {
 
 /* The current moment as a datetime-local value, in business time. */
 export function nowForDateTimeInput() {
-  const parts = new Date().toLocaleString("sv-SE", { timeZone: BUSINESS_TIMEZONE });
+  return dateTimeForInput(new Date().toISOString());
+}
+
+export function dateTimeForInput(value: string) {
+  const parts = new Date(value).toLocaleString("sv-SE", { timeZone: BUSINESS_TIMEZONE });
   return parts.slice(0, "YYYY-MM-DD HH:MM".length).replace(" ", "T");
 }
 
