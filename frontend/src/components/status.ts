@@ -46,6 +46,15 @@ export const VERSION_STATUSES: Record<string, StatusInfo> = {
   retired: { label: "Retired", tone: "closed" },
 };
 
+export const QUOTE_STATUSES: Record<string, StatusInfo> = {
+  draft: { label: "Draft", tone: "neutral" },
+  issued: { label: "Issued", tone: "waiting" },
+  accepted: { label: "Accepted", tone: "done" },
+  rejected: { label: "Rejected", tone: "closed" },
+  expired: { label: "Expired", tone: "closed" },
+  superseded: { label: "Superseded", tone: "closed" },
+};
+
 /* A package with no reviewed version cannot reach a customer. */
 export const PACKAGE_NOT_LIVE: StatusInfo = { label: "Not live", tone: "waiting" };
 

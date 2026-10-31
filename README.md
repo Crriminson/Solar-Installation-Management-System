@@ -120,6 +120,35 @@ spec.md        locked scope and technical baseline
 decisions.md   decision register and progress
 ```
 
+## Quotations and demonstration catalogue
+
+F01–F05 software is implemented. Create an administrator with
+`manage.py createsuperuser`, then run `manage.py seed_catalogue` to load
+labelled dummy products and 12 unreviewed packages. Running the seed again
+preserves existing products, prices and reviewed versions. The sample parts
+and prices need review before use; the command never activates a package.
+
+Sales requests a survey from an enquiry. Operations assigns a technician,
+the technician records and submits it, and Operations approves it. A requested
+correction is edited and resubmitted on the same revision; changes after
+approval create a new revision. Prior submissions stay in the audit history.
+
+An administrator reviews and activates the matching package. Sales then opens
+**Quotations**, selects the approved survey and generates a draft. Components,
+quantities, dated prices and GST are calculated by the backend. Issuing freezes
+the snapshot; issuing a later revision supersedes the previous issued one.
+Estimated subsidies never reduce the gross payable. Conditional eligibility
+must be confirmed where a rule requires it.
+
+Quotation validity and advance percentages are editable in Django admin.
+Run `manage.py expire_quotations` daily to record expiry audit events; the app
+also checks validity before allowing actions. Signature acceptance is F06;
+quotation PDF exports are F19.
+
+For a faster PostgreSQL regression run, use
+`manage.py test --settings=config.test_settings`. This uses a test-only password
+hasher; the normal application settings remain unchanged.
+
 ## How we work
 
 One spec feature (F01–F20 in spec.md section 7) is the unit of work,

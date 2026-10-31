@@ -80,6 +80,7 @@ export default function SurveyRecord() {
 
       {latest && <StatusPath stages={STAGES} current={pathStage(latest)} />}
       {user.can_approve_surveys && <AssignmentForm key={survey.revision} survey={survey} />}
+      {survey.is_approved && hasRole(user, "sales") && <p><ButtonLink to={`/quotations/new?enquiry=${survey.enquiry}`}>Generate quotation</ButtonLink></p>}
 
       {!latest && (
         <EmptyMessage>Nothing recorded yet. Start after the site visit.</EmptyMessage>

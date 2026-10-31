@@ -3,7 +3,7 @@
 Last updated: 2026-10-31
 Specification version: 1.0
 Baseline status: LOCKED 2026-10-31
-Implementation status: IN PROGRESS. F01 to F04 built; see section 5
+Implementation status: IN PROGRESS. F01–F05 software implemented; see section 5 and the verification record below
 
 ## 1. Current state
 
@@ -19,8 +19,9 @@ Done:
 - All five open decisions resolved (D024-D028).
 
 Not done:
-- F05 to F20.
-- Role permissions beyond survey review. Other endpoints only require a login.
+- F06 to F20, except the quotation subsidy-estimation dependency from F17.
+- Production catalogue review: the owner authorized dummy packages, not an engineering sign-off.
+- Initial local administrator account: none exists in the development database yet.
 - Performance targets in spec.md section 12 have not been measured.
 - Six states lack an exact slab and fall back to central-only until
   figures are supplied (section 4).
@@ -70,9 +71,9 @@ Not done:
 | D039 | Purchase cost is visible to Finance, Director, Operations Manager and Administrator only | Confirmed | Sales must not see it. rules.md section 4. The operations manager maintains the catalogue, so needs it |
 | D040 | Taking a package version live needs an Administrator | Confirmed | Implements the owner review in D028. Operations managers maintain packages but cannot activate them |
 | D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
-| D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
 | D042 | Dummy component packages may be authored for development at all required capacities | Confirmed | Owner, 2026-10-31: "you can create dummies or find some samples online". They remain clearly labelled, unreviewed and inactive until explicit administrator review; no claim of electrical compatibility |
 | D043 | Implement the subsidy estimator needed by F05 without treating all of F17 as complete | Confirmed | Dependency implementation inside the owner-authorized work through F05. Paperwork and application tracking stay in F17; no new business scope |
+| D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
 
 ## 3. Resolved decisions and their consequences
 
@@ -150,7 +151,7 @@ Corroborating official sources for central, Delhi and UP:
 | F02 | Qualification and follow-up | Verified | Backend owner/due-date rules, five qualification confirmations and outcome reason, audit timeline, stale-edit rejection and preserved form input. Assignment → Contacting → Qualified verified in browser; success, failure and role tests pass |
 | F03 | Survey and approval | Verified | Operations assignment and technician record scoping; Changes Requested now corrects and resubmits the same revision per spec. Prior submissions and corrections retained in audit snapshots. Approved revisions stay immutable. Browser correction/resubmission/approval and concurrency/permission tests pass |
 | F04 | Catalogue and packages | Implemented | Repeat-safe seed creates 12 labelled dummy packages: on/off-grid 1–5 kW, panel set and installation. No automatic activation. Prices and quantities validated with database constraints; product/package stale writes rejected. Software tests pass; production bills of materials still require owner review (D028/D042) |
-| F05 | Generated quotations | Not Started | Review gate set (D028) |
+| F05 | Generated quotations | Verified | Backend generation, line-level Decimal/GST rounding, versioned source snapshots, payment terms, issuance/content hash, rejection, expiry and superseding revisions; list/record/generation UI and audit timeline. Concurrent retries and permissions tested. Browser generation, blocked unreviewed package, package review and issuance verified. Acceptance capture is F06; PDFs are F19 |
 | F06 | Acceptance and signatures | Not Started | — |
 | F07 | Orders, payments, invoices | Not Started | Terms set (D024) |
 | F08 | Purchasing and inventory | Not Started | — |
@@ -187,3 +188,58 @@ behaviour, affected requirement IDs, and the date.
 | Open decisions at lock | None. O01-O05 resolved as D024-D028 |
 | Data work carried past lock | Exact slabs for 6 incomplete schemes (section 4); reference bills of materials for review (D028) |
 | Implementation authorization | Given. Feature work under way |
+
+
+## 8. F01–F05 verification — 31 Oct 2026
+
+Authorized batch: finish outstanding F01–F04 software and implement F05.
+The implementation batch added no dependencies and made no locked-spec edits. Publication was subsequently authorized by the owner (D044).
+
+- Standard PostgreSQL suite: `.venv/Scripts/python.exe manage.py test --noinput`
+  passed **207 tests in 187.664 seconds**. This includes real concurrent threads,
+  role denials, assignment scoping, stale revisions, catalogue review, duplicate
+  review, qualification failures, quotation retry keys, immutable document
+  snapshots, exact totals and subsidy eligibility/version tests.
+- Fast test-only configuration: `manage.py test --settings=config.test_settings
+  --noinput` also passed 207 tests. It changes only password hashing; the database
+  remains PostgreSQL. Development and production hashing are unchanged.
+- Frontend typecheck, production build and lint passed. Browser checks use a
+  disposable PostgreSQL database and fake staff; development records are not
+  changed by issuing test quotations or activating test packages.
+- Local development migrations were applied. `seed_catalogue` was attempted
+  locally and correctly refused because no superuser exists. Create the initial
+  administrator per README, then rerun the command. Successful repeat-safe
+  seeding and all 12 dummy packages were verified in isolated databases.
+
+Limits carried forward:
+- Real product compatibility and pricing still require owner review. Dummy
+  activation during a browser test is not production approval.
+- F06 acceptance evidence and F19 PDF exports are separate future features.
+  F05 does not expose an acceptance shortcut without signatures.
+- `expire_quotations` records expiry audit events. Until deployment scheduling
+  exists, run it daily; reads and actions independently enforce validity dates.
+- The subsidy register's state values retain D026's secondary-source status.
+  Rechecked the supplied [register](https://pmsolar.org.in/en/solar-subsidy-india/)
+  and [official central slabs](https://solar.delhi.gov.in/page/central-subsidy).
+  The secondary page's Ladakh summary and FAQ differ; the seeded rule preserves
+  the owner's approved register rather than silently amending policy. Official
+  state-by-state verification remains open, alongside the six uncomputable rules.
+- Performance/load, outdoor device checks and release backup/restore targets
+  remain project-wide release work, not evidence claimed by this batch.
+
+
+Browser evidence for this batch:
+- Staff sign-in, enquiry assignment, Contacting and Qualified transitions with
+  all five qualification confirmations and a recorded outcome reason.
+- Survey revision 1 submitted, returned for changes, corrected from 22.5 m to
+  30 m, resubmitted as revision 1 and approved. The activity timeline retains
+  both submissions, the review and the correction reason.
+- All 12 labelled dummy packages visible and initially Not live. Generation
+  correctly blocked an unreviewed package and retained typed payment terms.
+- A dummy 3 kW package was activated **only in the disposable test database**.
+  The generated quotation was issued: net INR 146,880.00, GST INR 18,345.60,
+  gross payable INR 165,225.60. The 30% advance is INR 49,567.68 and delivery
+  balance INR 115,657.92. Estimated central subsidy INR 78,000.00 is separate.
+  Validity, source versions, content hash and issued/generated audit events
+  were visible. The test database and temporary test server are removed after
+  verification; no test administrator or test-issued quotation is kept locally.

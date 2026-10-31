@@ -20,6 +20,9 @@ import SurveyList from "./features/surveys/SurveyList";
 import SurveyRecord from "./features/surveys/SurveyRecord";
 import SurveyStepForm from "./features/surveys/SurveyStepForm";
 import MyWorkPage from "./features/work/MyWorkPage";
+import QuotationList from "./features/quotations/quotation_list";
+import QuotationRecord from "./features/quotations/quotation_record";
+import QuotationGenerate from "./features/quotations/quotation_generate";
 
 export default function App() {
   return (
@@ -31,6 +34,9 @@ export default function App() {
       {/* Staff: inside the app frame, after signing in. */}
       <Route element={<RequireStaff />}>
         <Route path="/work" element={<MyWorkPage />} />
+        <Route path="/quotations" element={<QuotationList />} />
+        <Route path="/quotations/new" element={<QuotationGenerate />} />
+        <Route path="/quotations/:quoteId" element={<QuotationRecord />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

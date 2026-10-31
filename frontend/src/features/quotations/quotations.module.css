@@ -1,0 +1,29 @@
+/* Quotation list and document layouts use the shared operational design tokens. */
+
+.toolbar, .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+.form { display: grid; gap: var(--space-3); max-width: 680px; }
+.section { margin-bottom: var(--space-5); }
+.section h2 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+.facts, .totals { display: grid; grid-template-columns: minmax(140px, 200px) minmax(0, 1fr); gap: var(--space-2) var(--space-3); }
+.facts dd, .totals dd { margin: 0; overflow-wrap: anywhere; }
+.facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+.totals { max-width: 500px; margin-block: var(--space-3); font-variant-numeric: tabular-nums; }
+.totals dd { text-align: right; }
+.eligibility { border: 1px solid var(--color-border); padding: var(--space-3); display: grid; gap: var(--space-3); }
+.error { color: var(--tone-blocked-text); background: var(--tone-blocked-bg); padding: var(--space-3); border-radius: var(--radius); margin-block: var(--space-3); }
+.estimate { border-top: 1px solid var(--color-border); padding-block: var(--space-3); }
+.estimate h3 { font-size: var(--text-base); }
+.hash { font-family: var(--font-mono); font-size: var(--text-sm); color: var(--color-text-muted); overflow-wrap: anywhere; margin-top: var(--space-4); }
+
+@media (max-width: 600px) {
+  .facts { grid-template-columns: 1fr; gap: var(--space-1); }
+  .facts dd { margin-bottom: var(--space-2); }
+  .toolbar > * { width: 100%; }
+}
