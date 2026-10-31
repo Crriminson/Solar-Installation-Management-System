@@ -92,8 +92,8 @@ class BillDownloadTests(UploadTestCase):
         self.assertIn(self.client.get(self.url).status_code, [401, 403])
 
     def test_staff_can_download_a_bill(self):
-        User.objects.create_user("sales", password="test-pass-123")
-        self.client.login(username="sales", password="test-pass-123")
+        User.objects.create_user("sales", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales", password="test-pass-123", roles=["sales"])
 
         response = self.client.get(self.url)
 
@@ -104,8 +104,8 @@ class BillDownloadTests(UploadTestCase):
         cache.clear()
         self.client.post(reverse("enquiry-create"), VALID_PAYLOAD)
         without_bill = Enquiry.objects.order_by("-id").first()
-        User.objects.create_user("sales", password="test-pass-123")
-        self.client.login(username="sales", password="test-pass-123")
+        User.objects.create_user("sales", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales", password="test-pass-123", roles=["sales"])
 
         response = self.client.get(reverse("enquiry-bill", args=[without_bill.id]))
 
@@ -127,8 +127,8 @@ class SourceAttributionTests(TestCase):
         self.assertEqual(Enquiry.objects.get().source, "web_form")
 
     def test_staff_can_record_where_an_enquiry_came_from(self):
-        User.objects.create_user("sales", password="test-pass-123")
-        self.client.login(username="sales", password="test-pass-123")
+        User.objects.create_user("sales", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales", password="test-pass-123", roles=["sales"])
 
         self.submit_as_walk_in()
 
@@ -139,8 +139,8 @@ class PhoneSearchTests(TestCase):
     def setUp(self):
         cache.clear()
         self.client.post(reverse("enquiry-create"), VALID_PAYLOAD)
-        User.objects.create_user("sales", password="test-pass-123")
-        self.client.login(username="sales", password="test-pass-123")
+        User.objects.create_user("sales", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales", password="test-pass-123", roles=["sales"])
 
     def count_for(self, search):
         response = self.client.get(reverse("enquiry-list"), {"search": search})

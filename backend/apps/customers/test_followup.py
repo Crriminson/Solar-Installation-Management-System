@@ -148,7 +148,7 @@ class FollowUpApiTests(TestCase):
         cache.clear()
         self.enquiry = make_enquiry(self.client)
         self.user = User.objects.create_user(
-            username="sales", password="test-pass-123", first_name="Priya"
+            username="sales", password="test-pass-123", first_name="Priya", roles=["sales"]
         )
         self.client.login(username="sales", password="test-pass-123")
 

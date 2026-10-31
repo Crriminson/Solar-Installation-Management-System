@@ -1,6 +1,7 @@
 """Admin screens for customers, sites and enquiries."""
 
 from django.contrib import admin
+from apps.core.admin import ReadOnlyRecordAdmin
 
 from .models import ContactLog, Customer, Enquiry, Site
 
@@ -18,7 +19,7 @@ class SiteAdmin(admin.ModelAdmin):
 
 
 @admin.register(Enquiry)
-class EnquiryAdmin(admin.ModelAdmin):
+class EnquiryAdmin(ReadOnlyRecordAdmin):
     list_display = ("reference", "site", "status", "owner", "next_action_due", "created_at")
     list_filter = ("status", "source", "requested_system_type")
     search_fields = ("reference", "site__customer__full_name")

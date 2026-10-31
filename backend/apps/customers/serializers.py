@@ -20,6 +20,7 @@ from .models import (
     EnquiryStatus,
     Site,
     SystemType,
+    normalized_address,
 )
 from .constants import INDIAN_STATES, NATIONAL_PHONE_DIGITS
 from apps.uploads import validate_upload
@@ -52,9 +53,8 @@ class EnquiryListSerializer(serializers.ModelSerializer):
     site = SiteSerializer(read_only=True)
     is_possible_duplicate = serializers.SerializerMethodField()
 
-    owner_name = serializers.CharField(
-        source="owner.get_full_name", default="", read_only=True
-    )
+    owner_name = serializers.SerializerMethodField()
+    duplicate_candidate = CustomerSerializer(source="possible_duplicate_of", read_only=True)
     is_overdue = serializers.BooleanField(read_only=True)
     has_electricity_bill = serializers.SerializerMethodField()
     next_statuses = serializers.SerializerMethodField()
@@ -72,10 +72,16 @@ class EnquiryListSerializer(serializers.ModelSerializer):
             # follow-up (F02)
             "owner", "owner_name", "next_action", "next_action_due",
             "is_overdue", "lost_reason", "next_statuses",
+            "revision",
+            "possible_duplicate_of", "duplicate_review", "duplicate_review_reason",
+            "duplicate_candidate",
         ]
 
     def get_is_possible_duplicate(self, enquiry) -> bool:
-        return enquiry.possible_duplicate_of_id is not None
+        return enquiry.possible_duplicate_of_id is not None and not enquiry.duplicate_review
+
+    def get_owner_name(self, enquiry):
+        return (enquiry.owner.get_full_name() or enquiry.owner.username) if enquiry.owner else ""
 
     def get_has_electricity_bill(self, enquiry) -> bool:
         return bool(enquiry.electricity_bill)
@@ -167,8 +173,20 @@ class EnquiryCreateSerializer(serializers.Serializer):
         return validate_upload(value) if value else value
 
     def validate(self, data):
+        for field in ("shadow_free_roof_area_sqm", "requested_capacity_kw",
+                      "monthly_consumption_kwh", "monthly_bill_amount"):
+            if data.get(field) is not None and data[field] < 0:
+                raise serializers.ValidationError({field: "Enter a non-negative value."})
         start = data.get("billing_period_start")
         end = data.get("billing_period_end")
+        if data.get("monthly_bill_amount") is not None or start or end:
+            missing = {}
+            if not start:
+                missing["billing_period_start"] = "Enter the start of the bill's billing period."
+            if not end:
+                missing["billing_period_end"] = "Enter the end of the bill's billing period."
+            if missing:
+                raise serializers.ValidationError(missing)
         if start and end and end < start:
             raise serializers.ValidationError(
                 {"billing_period_end": "Billing period cannot end before it starts."}
@@ -205,15 +223,28 @@ class EnquiryCreateSerializer(serializers.Serializer):
         existing_customer = Customer.objects.filter(
             phone=customer_data["phone"]
         ).first()
+        if existing_customer is None:
+            matching_site = Site.objects.filter(address_key=normalized_address(
+                site_data["address_line"], site_data["city"], site_data["state"], site_data["pincode"]
+            )).select_related("customer").order_by("id").first()
+            existing_customer = matching_site.customer if matching_site else None
 
         customer = Customer.objects.create(**customer_data)
         site = Site.objects.create(customer=customer, **site_data)
 
-        return Enquiry.objects.create(
+        enquiry = Enquiry.objects.create(
             site=site,
             possible_duplicate_of=existing_customer,
             **validated_data,
         )
+        # Public intake has an explicit next action even before a salesperson picks it up.
+        from apps.core.api import business_date
+        from apps.core.models import record_event
+        enquiry.next_action = "Assign a sales owner and contact the customer"
+        enquiry.next_action_due = business_date()
+        enquiry.save(update_fields=["next_action", "next_action_due"])
+        record_event(enquiry, "received", after={"source": enquiry.source})
+        return enquiry
 
 
 # ============================================================

@@ -14,14 +14,21 @@ fields on the form.
 """
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse, Http404
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+
+from apps.accounts.models import Role
+from apps.core.api import SalesAccess, business_date, check_revision
+from apps.core.models import AuditEvent, record_event
+from apps.core.serializers import AuditEventSerializer
 
 from .constants import NATIONAL_PHONE_DIGITS
 from .models import ContactLog, Enquiry, EnquirySource, OPEN_STATUSES
@@ -59,6 +66,8 @@ class EnquiryCreateView(generics.CreateAPIView):
     throttle_classes = [PublicEnquiryThrottle]
 
     def create(self, request, *args, **kwargs):
+        if request.user.is_authenticated and not SalesAccess().has_permission(request, self):
+            self.permission_denied(request, message=SalesAccess.message)
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
@@ -87,13 +96,13 @@ class EnquiryListView(generics.ListAPIView):
     """
 
     serializer_class = EnquiryListSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SalesAccess]
 
     def get_queryset(self):
         # select_related avoids one extra query per row for the site,
         # its customer and the owner.
         queryset = Enquiry.objects.select_related(
-            "site", "site__customer", "owner"
+            "site", "site__customer", "owner", "possible_duplicate_of"
         )
 
         params = self.request.query_params
@@ -125,11 +134,13 @@ class EnquiryListView(generics.ListAPIView):
 
         if params.get("overdue") == "true":
             queryset = queryset.filter(
-                next_action_due__lt=timezone.localdate(),
+                next_action_due__lt=business_date(),
                 status__in=OPEN_STATUSES,
             )
 
-        return queryset
+        ordering = {"received": "created_at", "-received": "-created_at",
+                    "due": "next_action_due", "-due": "-next_action_due"}
+        return queryset.order_by(ordering.get(params.get("sort"), "-created_at"), "-id")
 
 
 class EnquiryBillView(APIView):
@@ -141,7 +152,7 @@ class EnquiryBillView(APIView):
     than opened inside the app.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [SalesAccess]
 
     def get(self, request, pk):
         enquiry = Enquiry.objects.filter(pk=pk).first()
@@ -269,3 +280,40 @@ class ContactLogListCreateView(generics.ListCreateAPIView):
         serializer.save(
             enquiry_id=self.kwargs["pk"], staff=self.request.user
         )
+
+
+class DuplicateReviewView(APIView):
+    """Resolve a flag explicitly without merging or discarding incoming records."""
+
+    permission_classes = [SalesAccess]
+
+    @transaction.atomic
+    def post(self, request, pk):
+        enquiry = get_object_or_404(Enquiry.objects.select_for_update(), pk=pk)
+        check_revision(enquiry, request.data)
+        decision = request.data.get("decision")
+        reason = str(request.data.get("reason", "")).strip()
+        if decision not in ("confirmed", "distinct") or not reason:
+            return Response({"reason": ["Choose confirmed or distinct and record the review reason."]}, status=400)
+        if not enquiry.possible_duplicate_of_id or enquiry.duplicate_review:
+            return Response({"detail": "There is no pending duplicate flag."}, status=400)
+        enquiry.duplicate_review = decision
+        enquiry.duplicate_review_reason = reason
+        enquiry.revision += 1
+        enquiry.save()
+        record_event(enquiry, "duplicate_reviewed", request.user,
+                     after={"decision": decision, "candidate_customer": enquiry.possible_duplicate_of_id},
+                     reason=reason)
+        return Response(EnquiryListSerializer(enquiry).data)
+
+
+class EnquiryActivityView(generics.ListAPIView):
+    """Read the actor and before/after evidence behind the enquiry's history."""
+
+    permission_classes = [SalesAccess]
+    serializer_class = AuditEventSerializer
+
+    def get_queryset(self):
+        pk = self.kwargs["pk"]
+        get_object_or_404(Enquiry, pk=pk)
+        return AuditEvent.objects.filter(record_type="customers.enquiry", record_id=pk).select_related("actor")

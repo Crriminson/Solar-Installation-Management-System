@@ -30,6 +30,8 @@ VALID_PAYLOAD = {
     "requested_system_type": "on_grid",
     "requested_capacity_kw": "3.00",
     "monthly_bill_amount": "2400.00",
+    "billing_period_start": "2026-09-01",
+    "billing_period_end": "2026-09-30",
 }
 
 
@@ -187,8 +189,8 @@ class SalesQueuePermissionTests(TestCase):
         self.assertIn(response.status_code, [401, 403])
 
     def test_logged_in_staff_can_read_the_queue(self):
-        User.objects.create_user(username="sales1", password="test-pass-123")
-        self.client.login(username="sales1", password="test-pass-123")
+        User.objects.create_user(username="sales1", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales1", password="test-pass-123", roles=["sales"])
 
         response = self.client.get(self.url)
 
@@ -196,16 +198,16 @@ class SalesQueuePermissionTests(TestCase):
         self.assertEqual(response.json()["count"], 1)
 
     def test_queue_can_be_searched_by_phone(self):
-        User.objects.create_user(username="sales2", password="test-pass-123")
-        self.client.login(username="sales2", password="test-pass-123")
+        User.objects.create_user(username="sales2", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales2", password="test-pass-123", roles=["sales"])
 
         response = self.client.get(self.url, {"search": "9876543210"})
 
         self.assertEqual(response.json()["count"], 1)
 
     def test_search_with_no_match_returns_empty_not_error(self):
-        User.objects.create_user(username="sales3", password="test-pass-123")
-        self.client.login(username="sales3", password="test-pass-123")
+        User.objects.create_user(username="sales3", password="test-pass-123", roles=["sales"])
+        self.client.login(username="sales3", password="test-pass-123", roles=["sales"])
 
         response = self.client.get(self.url, {"search": "nobody"})
 

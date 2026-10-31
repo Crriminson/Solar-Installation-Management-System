@@ -18,6 +18,9 @@ from django.core.exceptions import ValidationError
 from django.db import models, transaction
 from django.utils import timezone
 
+from apps.core.api import business_date
+from apps.core.models import record_event
+
 from .constants import STATE_CHOICES
 
 
@@ -129,6 +132,7 @@ class Site(models.Model):
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=60, choices=STATE_CHOICES)
     pincode = models.CharField(max_length=10)
+    address_key = models.CharField(max_length=450, db_index=True, editable=False, default="")
 
     # Area with no shade for most of the day. Drives how many panels fit.
     shadow_free_roof_area_sqm = models.DecimalField(
@@ -143,6 +147,10 @@ class Site(models.Model):
 
     def __str__(self):
         return f"{self.address_line}, {self.city}"
+
+    def save(self, *args, **kwargs):
+        self.address_key = normalized_address(self.address_line, self.city, self.state, self.pincode)
+        super().save(*args, **kwargs)
 
 
 # ============================================================
@@ -159,6 +167,9 @@ class Enquiry(models.Model):
     """
 
     reference = models.CharField(max_length=20, unique=True, editable=False)
+    revision = models.PositiveIntegerField(default=1)
+    duplicate_review = models.CharField(max_length=20, blank=True)
+    duplicate_review_reason = models.TextField(blank=True)
     site = models.ForeignKey(Site, on_delete=models.PROTECT, related_name="enquiries")
     source = models.CharField(max_length=20, choices=EnquirySource.choices)
     status = models.CharField(
@@ -242,7 +253,7 @@ class Enquiry(models.Model):
 
         with transaction.atomic():
             super().save(*args, **kwargs)
-            self.reference = f"ENQ-{self.created_at.year}-{self.id:05d}"
+            self.reference = f"ENQ-{business_date().year}-{self.id:05d}"
             super().save(update_fields=["reference"])
 
     # --- follow-up state (F02) ----------------------------------------
@@ -256,7 +267,7 @@ class Enquiry(models.Model):
         """True when the planned next action has passed its due date."""
         if not self.next_action_due or not self.is_open:
             return False
-        return self.next_action_due < timezone.localdate()
+        return self.next_action_due < business_date()
 
     def change_status(self, new_status, *, reason="", next_action="",
                       next_action_due=None):
@@ -330,3 +341,14 @@ class ContactLog(models.Model):
 
     def __str__(self):
         return f"{self.enquiry.reference} - {self.get_channel_display()}"
+
+
+# ============================================================
+# Review inputs
+# ============================================================
+
+def normalized_address(address_line, city, state, pincode):
+    """Ignore punctuation and spacing, while retaining locality and postcode."""
+    parts = (address_line, city, state, pincode)
+    return "|".join("".join(character for character in part.casefold() if character.isalnum())
+                    for part in parts)
