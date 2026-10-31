@@ -302,6 +302,7 @@
 @media (max-width: 899px) {
   .shell,
   .shellRailed {
+    --sticky-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));
     grid-template-columns: minmax(0, 1fr);
     /* Keeps the last row of a page clear of the bar. */
     padding-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));

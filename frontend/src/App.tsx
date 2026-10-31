@@ -59,7 +59,6 @@ export default function App() {
         <Route path="/quotations" element={<QuotationList />} />
         <Route path="/quotations/new" element={<QuotationGenerate />} />
         <Route path="/quotations/:quoteId" element={<QuotationRecord />} />
-        <Route path="/quotations/:quoteId/accept" element={<QuotationAccept />} />
         <Route path="/orders" element={<OrderList />} />
         <Route path="/orders/:orderId" element={<OrderRecord />} />
         <Route path="/purchasing" element={<PurchaseList />} />
@@ -72,7 +71,6 @@ export default function App() {
         <Route path="/schedule/new" element={<JobCreate />} />
         <Route path="/schedule/:jobId" element={<JobRecord />} />
         <Route path="/installations/:reportId" element={<InstallationForm />} />
-        <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
         <Route path="/warranties" element={<WarrantyList />} />
         <Route path="/warranties/:warrantyId" element={<WarrantyRecord />} />
         <Route path="/tickets" element={<TicketList />} />
@@ -92,6 +90,13 @@ export default function App() {
         <Route path="/catalogue/products/:productId/edit" element={<ProductForm />} />
         <Route path="/catalogue/packages" element={<PackageList />} />
         <Route path="/catalogue/packages/:packageId" element={<PackageRecord />} />
+      </Route>
+
+      {/* Signed in, but with no staff navigation: these are the screens
+          the customer is handed the device on (F06, F11). */}
+      <Route element={<RequireStaff chrome={false} />}>
+        <Route path="/quotations/:quoteId/accept" element={<QuotationAccept />} />
+        <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
       </Route>
 
       <Route path="*" element={<EmptyMessage>This page does not exist.</EmptyMessage>} />

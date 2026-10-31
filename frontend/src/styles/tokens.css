@@ -211,7 +211,12 @@
   --content-max: 1440px;
   --control-height: 38px;          /* office buttons and inputs */
   --control-height-field: 48px;    /* phones: gloves, hurry, one hand */
+  --control-height-scan: 56px;     /* the scan field, used at arm's length */
   --touch-min: 44px;
+
+  /* How far a sticky footer sits off the bottom. The staff shell raises
+     it over the phone's destination bar; a signing view has none. */
+  --sticky-bottom: 0px;
 
   /* ============================================================
      Motion

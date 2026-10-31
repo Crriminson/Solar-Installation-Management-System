@@ -1,0 +1,39 @@
+/*
+  The restricted customer view: a mark, and the document. Nothing else.
+*/
+
+.shell {
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  min-height: var(--header-height);
+  padding: 0 var(--space-5);
+  padding-top: env(safe-area-inset-top, 0px);
+  background: var(--color-ink);
+}
+
+.content {
+  width: 100%;
+  /* Narrower than a staff screen: this is one document being read,
+     often at arm's length on a tablet someone else is holding. */
+  max-width: 820px;
+  margin-inline: auto;
+  padding: var(--space-5);
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 899px) {
+  .bar {
+    padding: 0 var(--space-3);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .content {
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+  }
+}

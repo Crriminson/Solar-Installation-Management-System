@@ -6,13 +6,20 @@
   way, so it is not what keeps these screens private.
 */
 
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 
 import AppShell from "../../components/AppShell";
+import PresentShell from "../../components/PresentShell";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import { useSession } from "./session";
 
-export default function RequireStaff() {
+/*
+  `chrome={false}` keeps the sign-in check and drops the shell, for the
+  screens a customer is handed the device on. Spec.md F06: the customer
+  sees their document "and nothing else — no margins, no other
+  customers, no staff navigation".
+*/
+export default function RequireStaff({ chrome = true }: { chrome?: boolean }) {
   const location = useLocation();
   const { data, isPending, isError, error, refetch } = useSession();
 
@@ -24,5 +31,11 @@ export default function RequireStaff() {
     return <Navigate to={`/login?next=${next}`} replace />;
   }
 
-  return <AppShell user={data.user} />;
+  if (chrome) return <AppShell user={data.user} />;
+
+  return (
+    <PresentShell>
+      <Outlet />
+    </PresentShell>
+  );
 }
