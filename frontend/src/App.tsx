@@ -35,6 +35,8 @@ import PackingScreen from "./features/fulfilment/packing_screen";
 import JobList from "./features/scheduling/job_list";
 import JobCreate from "./features/scheduling/job_create";
 import JobRecord from "./features/scheduling/job_record";
+import InstallationForm from "./features/installations/installation_form";
+import InstallationAccept from "./features/installations/installation_accept";
 
 export default function App() {
   return (
@@ -61,6 +63,8 @@ export default function App() {
         <Route path="/schedule" element={<JobList />} />
         <Route path="/schedule/new" element={<JobCreate />} />
         <Route path="/schedule/:jobId" element={<JobRecord />} />
+        <Route path="/installations/:reportId" element={<InstallationForm />} />
+        <Route path="/installations/:reportId/accept" element={<InstallationAccept />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

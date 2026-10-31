@@ -162,7 +162,7 @@ Corroborating official sources for central, Delhi and UP:
 | F08 | Purchasing and inventory | Backend implemented | Serialized units and batch lots; no stock state changes without a movement. Partial lots split into portions of one drum |
 | F09 | Packing, scanning, dispatch | Implemented | Reservation checks before it claims, so a shortage blocks without stranding stock. Scan rejects wrong product, another order's unit, an already-dispatched asset and a repeat. Delivery is what makes the balance due |
 | F10 | Scheduling and installation | Implemented | Overlapping assignments rejected with the technician's row locked; reschedule keeps the previous slot and its reason; a technician sees only their own jobs, on a thinner payload |
-| F11 | Installation evidence | Not Started | — |
+| F11 | Installation evidence | Implemented | Submission refused while evidence is missing; acceptance must quote the revision shown; refusal is a recorded outcome that sends the job back, not an error |
 | F12 | Warranties | Not Started | — |
 | F13 | Support and replacements | Not Started | — |
 | F14 | Costs and finance | Not Started | Scope set (D025) |

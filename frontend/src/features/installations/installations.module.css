@@ -1,0 +1,78 @@
+/* On-site form and handover, on the shared operational tokens. */
+
+.toolbar, .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+.form { display: grid; gap: var(--space-3); max-width: 560px; }
+.section { margin-bottom: var(--space-5); }
+.section h2 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+
+.facts { display: grid; grid-template-columns: minmax(140px, 220px) minmax(0, 1fr); gap: var(--space-2) var(--space-3); }
+.facts dd { margin: 0; }
+.facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* What is still outstanding, kept in view the whole time. */
+.todo {
+  background: var(--tone-waiting-bg);
+  color: var(--tone-waiting-text);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  margin-block: var(--space-3);
+}
+.todo ul { margin: var(--space-2) 0 0; padding-left: var(--space-4); }
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  text-transform: capitalize;
+}
+
+.scanLabel { font-weight: 600; }
+.scanInput {
+  height: 52px;
+  font-size: var(--text-lg);
+  font-family: var(--font-mono);
+  padding: 0 var(--space-3);
+  border: 2px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.serialList {
+  margin: var(--space-3) 0 0;
+  padding-left: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.photoList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+.photoList img { width: 100%; border-radius: var(--radius); display: block; }
+.photoList span { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+.blocked {
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  margin-block: var(--space-3);
+}
+.error { color: var(--tone-blocked-text); font-size: var(--text-sm); }
+
+@media (max-width: 600px) {
+  .facts { grid-template-columns: 1fr; }
+}
