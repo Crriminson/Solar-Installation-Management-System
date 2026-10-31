@@ -154,7 +154,7 @@ Corroborating official sources for central, Delhi and UP:
 | F04 | Catalogue and packages | Implemented | Repeat-safe seed creates 12 labelled dummy packages: on/off-grid 1–5 kW, panel set and installation. No automatic activation. Prices and quantities validated with database constraints; product/package stale writes rejected. Software tests pass; production bills of materials still require owner review (D028/D042) |
 | F05 | Generated quotations | Verified | Backend generation, line-level Decimal/GST rounding, versioned source snapshots, payment terms, issuance/content hash, rejection, expiry and superseding revisions; list/record/generation UI and audit timeline. Concurrent retries and permissions tested. Browser generation, blocked unreviewed package, package review and issuance verified. Acceptance capture is F06; PDFs are F19 |
 | F06 | Acceptance and signatures | Backend implemented | Supervised signing; acceptance frozen to one document hash, witness recorded. Remote Telegram path lands with F16 (D040) |
-| F07 | Orders, payments, invoices | Not Started | Terms set (D024) |
+| F07 | Orders, payments, invoices | Backend implemented | Order per accepted quotation; deposit billed once, bank reference banked once, invoice never overpaid, all by check constraint. Dispatch gate needs cleared money |
 | F08 | Purchasing and inventory | Not Started | — |
 | F09 | Packing, scanning, dispatch | Not Started | — |
 | F10 | Scheduling and installation | Not Started | — |

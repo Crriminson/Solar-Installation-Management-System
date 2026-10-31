@@ -24,6 +24,8 @@ import QuotationList from "./features/quotations/quotation_list";
 import QuotationRecord from "./features/quotations/quotation_record";
 import QuotationGenerate from "./features/quotations/quotation_generate";
 import QuotationAccept from "./features/quotations/quotation_accept";
+import OrderList from "./features/orders/order_list";
+import OrderRecord from "./features/orders/order_record";
 
 export default function App() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
         <Route path="/quotations/new" element={<QuotationGenerate />} />
         <Route path="/quotations/:quoteId" element={<QuotationRecord />} />
         <Route path="/quotations/:quoteId/accept" element={<QuotationAccept />} />
+        <Route path="/orders" element={<OrderList />} />
+        <Route path="/orders/:orderId" element={<OrderRecord />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
