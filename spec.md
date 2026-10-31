@@ -61,6 +61,33 @@ Companion documents:
 - decisions.md — decision register, open questions, progress, evidence,
   and the subsidy research register.
 
+### 2.1 Delivery priority
+
+Everything in section 7 stays in scope. This orders it, so that if time
+runs short the thing that gets thinner is ceremony, never the story the
+problem statement tells.
+
+**Tier 1 — the spine.** F01 to F15. These are the five scenes in the
+brief end to end: a homeowner's enquiry becomes a survey, a generated
+quotation, a paid order, a scanned dispatch, a warranty that starts by
+itself, a signed installation, a service call answered from a serial
+number, and a month-end the director can read. Nothing here is optional,
+because removing any one of them breaks the chain either side of it.
+
+**Tier 2 — what makes it credible.** F17 subsidy estimates, the
+quotation, invoice and handover documents in F19, F20 role work queues,
+and the audit trail in F18. The brief names subsidy paperwork, invoices
+and "nobody has to phone anyone", so these are answers to the brief
+rather than extras.
+
+**Tier 3 — build if the time is there.** F16 Telegram, in-app
+notifications in F20, the remaining F19 documents, and the reliability
+work in F18 beyond the audit trail. None of these appear in the brief;
+they are the owner's additions and they can land late or thin without
+leaving a hole.
+
+A Tier 3 item is never a reason to leave a Tier 1 path unfinished.
+
 ## 3. Technology baseline
 
 Release families are fixed. Exact patch versions are locked at setup.
@@ -412,6 +439,13 @@ A payment records amount, method, reference, the payment date, the
 recorded-at timestamp, the staff member, status, and its allocation
 against invoices or the order.
 
+A cleared receipt allocates itself to the oldest unsettled invoice on
+the order, up to what each side can take. Finance can reallocate by
+hand where a customer has paid against a specific invoice, but the
+common case — one advance against one advance invoice — takes no
+separate step. Automatic allocation obeys the same caps as a manual
+one.
+
 Rules:
 - Payments are recorded by authorized staff. No payment gateway and no
   automatic bank reconciliation.
@@ -468,6 +502,12 @@ permission-controlled, and requires a reason that is written to the audit
 log.
 
 States: `Pending → Reserved → Packed → Dispatched → Delivered`.
+
+Opening the packing list reserves the stock in the same action. Pending
+exists for the moment before that attempt resolves, not as a step
+somebody has to remember to press. A warehouse worker meets the order
+either ready to pack or blocked, and never has to ask why nothing is
+reserved.
 
 Initial deliveries are complete-order deliveries. A shortage produces a
 blocked status and a procurement action rather than a partial dispatch.
@@ -548,9 +588,15 @@ A ticket holds the customer and site, the affected assets, the fault
 description or code, photos, priority, an assigned owner, status, and the
 warranty assessment.
 
-States: `New → Triaged → Visit Scheduled → Diagnosed → Awaiting
-Approval/Parts → Work In Progress → Awaiting Customer Confirmation →
-Closed`.
+States: `New → Diagnosed → In Progress → Awaiting Customer Confirmation
+→ Closed`.
+
+Four working states, not eight. Triage, scheduling and waiting for a
+part are facts about a ticket, not stages of it: a scheduled visit is a
+job in F10, and waiting on a part or an approval is recorded as a block
+with an owner and a reason, exactly as a delayed installation is. A
+state machine the support desk has to study is one they will route
+around.
 
 Rules:
 - A technician visit verifies the fault and records the work
@@ -561,7 +607,8 @@ Rules:
 - Non-covered work generates an estimate from configured parts and labour
   rates, requires customer approval before work starts, and invoices from
   the actual approved work. Exceeding approved scope requires fresh
-  approval.
+  approval. Approval is recorded as a decision with a name and a time;
+  a second signature is not required for a repair.
 - A replacement reserves and issues the new unit, records the old unit as
   returned or quarantined, and links both to the original installation
   and this ticket.
@@ -581,7 +628,10 @@ refunds, and technician payable and paid records.
 
 Costing:
 - A serialized asset carries its recorded acquisition cost.
-- Bulk consumables use a documented weighted-average cost.
+- Bulk consumables are costed at the unit cost of the lot they came
+  from, which the goods receipt already records. Weighted average is a
+  refinement to make only if lots of the same product are routinely
+  bought at different prices.
 - Returns reverse the originally allocated cost.
 
 Double-counting rules:
@@ -721,7 +771,13 @@ no retyping. Each document is a PDF, is stored against its record, is
 regenerable, and carries its reference, revision and generation
 timestamp.
 
-Required documents:
+Required for the baseline are the quotation, the invoice and receipt,
+and the installation handover: those are the three the brief names and
+the three a customer actually asks for. The warranty certificate and
+the dashboard export follow them, and are Tier 2 and Tier 3
+respectively.
+
+Documents:
 - **Quotation** — the issued quotation with its component list, pricing,
   tax, subsidy breakdown, terms and validity.
 - **Invoice and payment receipt** — per F07, including the zero-charge
@@ -752,10 +808,14 @@ orders to pack for the warehouse, today's and this week's jobs for
 technicians, open tickets for support, cleared-payment and overdue-balance
 items for finance.
 
-In-app notification on the events that hand work between roles: order
-confirmed (warehouse and scheduling), survey submitted (approver),
-delivery completed (installation crew), ticket assigned, payment cleared,
-and follow-up overdue.
+The queues are the requirement. A role that can open one screen and see
+everything waiting on it does not need telling, and the brief's "nobody
+has to phone anyone" is satisfied by the queue alone.
+
+In-app notification on the hand-off events — order confirmed, survey
+submitted, delivery completed, ticket assigned, payment cleared,
+follow-up overdue — is Tier 3. It is a better experience, not a missing
+capability.
 
 Notifications are a view over real record state, never a separate source
 of truth, and are generated in the same transaction as the state change
@@ -857,9 +917,12 @@ concurrency targets are what the numbers above actually imply.
 
 ## 13. Definition of done
 
+Read with the priority in section 2.1. The list below is Tier 1 unless
+it says otherwise.
+
 The baseline is complete when:
 
-- Every requirement in section 7 works end to end.
+- Every Tier 1 requirement works end to end.
 - Permission checks are tested, per role.
 - Concurrent allocation cannot double-book a serialized asset.
 - A repeated confirmation cannot duplicate a project or an invoice.
@@ -871,8 +934,9 @@ The baseline is complete when:
   cost remains visible on the job.
 - A ticket cannot close without recorded customer confirmation.
 - Every dashboard figure drills down to its source records.
-- A Telegram outage leaves core operations uncorrupted.
-- Backup and restore are demonstrated.
+- A Telegram outage leaves core operations uncorrupted. *(Tier 3, and
+  only once F16 exists.)*
+- Backup and restore are demonstrated. *(Tier 2.)*
 - Seed data populates a convincing demo of the full lifecycle.
 - Documentation describes what was actually built.
 

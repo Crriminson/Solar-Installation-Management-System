@@ -75,6 +75,10 @@ Not done:
 | D042 | Dummy component packages may be authored for development at all required capacities | Confirmed | Owner, 2026-10-31: "you can create dummies or find some samples online". They remain clearly labelled, unreviewed and inactive until explicit administrator review; no claim of electrical compatibility |
 | D043 | Implement the subsidy estimator needed by F05 without treating all of F17 as complete | Confirmed | Dependency implementation inside the owner-authorized work through F05. Paperwork and application tracking stay in F17; no new business scope |
 | D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
+| D045 | Scope prioritised into three tiers; no feature removed | Confirmed | Owner, 2026-10-31: the flow was too heavy to finish in time. spec.md section 2.1 orders F01-F20 by what the problem statement actually asks for. Tier 1 is F01-F15, the five scenes end to end. Ceremony is what thins, never the story |
+| D046 | A cleared receipt allocates itself to the oldest unsettled invoice | Confirmed | Owner rescope 2026-10-31. One advance against one advance invoice needed two steps; making people press a second button teaches them to skip allocation. Manual reallocation remains, under the same caps |
+| D047 | Opening a packing list reserves stock in the same action | Confirmed | Owner rescope 2026-10-31. Pending was a state somebody had to know to leave. The warehouse now meets an order either ready to pack or blocked |
+| D048 | Support ticket states cut from eight to four | Confirmed | Owner rescope 2026-10-31, F13. Triage, scheduling and waiting for a part are facts about a ticket, not stages of it: a visit is an F10 job, and waiting is a block with an owner, as it is for an installation |
 
 ## 3. Resolved decisions and their consequences
 
@@ -176,6 +180,7 @@ Corroborating official sources for central, Delhi and UP:
 | 1 | PostgreSQL 17 → 16 | Owner, 2026-10-31 | spec.md §3 table. No requirement changes; 16.13 already running, no 17-only feature used |
 | 2 | Superseded added to the survey revision states | AtharvK-28, 2026-10-31 | F03 states. Needed to meet F03's rule that later changes create a new revision (D038) |
 | 3 | Quotation delivery and acceptance over Telegram | Owner, 2026-10-31 | spec.md section 5, F06, F16, F19. Was: acceptance only by supervised signing on a staff-held device, witnessed by the staff member. Now: a second remote path, where staff send the issued PDF and a single-use expiring signing link to the customer's linked chat, and the binding plus token stand in for the witness. Lands with F16; F06 still ships supervised-first so acceptance never waits on the bot. No customer dashboard is added, so D008 stands |
+| 4 | Delivery prioritised into tiers; operational flow simplified | Owner, 2026-10-31 | spec.md section 2.1 (new), F07, F09, F13, F14, F19, F20, section 13. Was: every requirement flat, with allocation, reservation and an eight-state ticket each needing their own step. Now: F01-F15 named as the Tier 1 spine, with F16 and in-app notifications dropped to Tier 3. No feature removed and no business rule weakened — every guarantee in section 6 still holds (D045, D046, D047, D048) |
 
 Each entry records: the owner's instruction, previous behaviour, new
 behaviour, affected requirement IDs, and the date.
