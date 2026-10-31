@@ -11,7 +11,7 @@
   edge one.
 */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -29,6 +29,12 @@ import BrandMark from "./BrandMark";
 import Button from "./Button";
 import styles from "./AppShell.module.css";
 
+/* Below this the sidebar would eat the table beside it, so the rail is
+   forced whatever the person chose. Matched in script rather than in CSS
+   because the brand mark has to drop its name too, and that lives in
+   another stylesheet. */
+const RAIL_QUERY = "(min-width: 900px) and (max-width: 1180px)";
+
 const ROLE_LABELS: Record<string, string> = {
   administrator: "Administrator",
   sales: "Sales",
@@ -43,7 +49,9 @@ const ROLE_LABELS: Record<string, string> = {
 export default function AppShell({ user }: { user: StaffUser }) {
   // Collapsing is for this session only. It is a preference about the
   // screen in front of you, not a setting worth storing.
-  const [railed, setRailed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const forced = useForcedRail();
+  const railed = collapsed || forced;
 
   const sections = visibleSections(user);
   const items = sections.flatMap((section) => section.items);
@@ -67,15 +75,19 @@ export default function AppShell({ user }: { user: StaffUser }) {
           ))}
         </nav>
 
-        <button
-          type="button"
-          className={styles.railToggle}
-          aria-pressed={railed}
-          onClick={() => setRailed((on) => !on)}
-        >
-          {railed ? <CaretRightIcon aria-hidden /> : <CaretLeftIcon aria-hidden />}
-          <span className={styles.linkLabel}>Collapse</span>
-        </button>
+        {/* Hidden when the width forces the rail: the choice is not
+            available, so offering it would do nothing. */}
+        {!forced && (
+          <button
+            type="button"
+            className={styles.railToggle}
+            aria-pressed={collapsed}
+            onClick={() => setCollapsed((on) => !on)}
+          >
+            {collapsed ? <CaretRightIcon aria-hidden /> : <CaretLeftIcon aria-hidden />}
+            <span className={styles.linkLabel}>Collapse</span>
+          </button>
+        )}
       </aside>
 
       <div className={styles.frame}>
@@ -247,6 +259,25 @@ function SignOutButton({ className }: { className?: string }) {
       Sign out
     </Button>
   );
+}
+
+/* True while the window is in the band that forces the icon rail. */
+function useForcedRail() {
+  const [forced, setForced] = useState(
+    () => window.matchMedia(RAIL_QUERY).matches,
+  );
+
+  useEffect(() => {
+    const query = window.matchMedia(RAIL_QUERY);
+    const update = (event: MediaQueryListEvent) => setForced(event.matches);
+
+    /* The initial value is read when the state is created, so this only
+       has to follow changes from here on. */
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  return forced;
 }
 
 function visibleSections(user: StaffUser): NavSection[] {

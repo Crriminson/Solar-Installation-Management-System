@@ -46,7 +46,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: var(--space-3);
+  margin-bottom: var(--space-2);
 }
 
 .sectionTitle {
@@ -128,8 +128,8 @@
 /* ============================================================
    The rail
 
-   Set by choice at any width, and forced between 900 and 1180 where a
-   full sidebar would eat the table beside it.
+   Set by choice at any width, and forced between 900 and 1180 by
+   AppShell, which also drops the brand mark's name.
    ============================================================ */
 
 .shellRailed {
@@ -152,24 +152,6 @@
 .shellRailed .section {
   margin-bottom: var(--space-2);
 }
-
-@media (min-width: 900px) and (max-width: 1180px) {
-  .shell {
-    grid-template-columns: var(--sidebar-width-rail) minmax(0, 1fr);
-  }
-
-  .linkLabel,
-  .sectionTitle {
-    display: none;
-  }
-
-  .link,
-  .railToggle {
-    justify-content: center;
-    padding: 0;
-  }
-}
-
 
 /* ============================================================
    Header
@@ -313,8 +295,7 @@
    destinations. Everything else is in the sheet behind More.
    ============================================================ */
 
-.phoneBar,
-.sheet {
+.phoneBar {
   display: none;
 }
 
@@ -387,7 +368,6 @@
   .sheet {
     position: fixed;
     inset: auto 0 0;
-    display: block;
     width: 100%;
     max-height: 80vh;
     overflow-y: auto;
