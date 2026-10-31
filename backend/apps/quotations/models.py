@@ -132,3 +132,79 @@ class QuoteRequest(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["actor", "key"], name="unique_quote_request_key")]
+
+
+# ============================================================
+# Acceptance and signature (F06)
+# ============================================================
+
+class AcceptanceChannel(models.TextChoices):
+    """How the customer was identified at the moment they signed."""
+
+    SUPERVISED = "supervised", "Signed on a staff device"
+    REMOTE = "remote", "Signed remotely over Telegram"
+
+
+class Acceptance(models.Model):
+    """
+    Evidence that a named customer accepted one exact quotation revision.
+
+    Written once and never edited. The order is built on this record, and
+    it is what settles a later argument about what was agreed.
+
+    Installation acceptance (F11) and service resolution (F13) are
+    separate records. Neither implies this one.
+    """
+
+    quotation = models.OneToOneField(
+        QuoteRevision, on_delete=models.PROTECT, related_name="acceptance"
+    )
+    channel = models.CharField(
+        max_length=20,
+        choices=AcceptanceChannel.choices,
+        default=AcceptanceChannel.SUPERVISED,
+    )
+    customer_name = models.CharField(
+        max_length=150,
+        help_text="Typed by the customer, not copied off the record.",
+    )
+    signature = models.ImageField(upload_to="signatures/")
+
+    # The document as it stood when signed. Re-hashing the quotation
+    # later must reproduce this, or what was signed was something else.
+    document_content_hash = models.CharField(max_length=64)
+
+    # Supervised signing happens in front of somebody, and that person is
+    # the evidence. A remote acceptance has no witness, so F16 records the
+    # verified chat binding and its single-use token in place of one.
+    witnessed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="acceptances_witnessed",
+    )
+
+    # When the customer signed, which is not when the row was written.
+    accepted_at = models.DateTimeField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-id"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(channel="remote") | models.Q(witnessed_by__isnull=False),
+                name="supervised_acceptance_names_its_witness",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.quotation.quote.reference} accepted by {self.customer_name}"
+
+    def save(self, *args, **kwargs):
+        if self.pk and type(self).objects.filter(pk=self.pk).exists():
+            raise ValidationError("An acceptance record cannot be edited.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError("Acceptance evidence cannot be deleted.")

@@ -19,7 +19,8 @@ from apps.customers.models import Enquiry
 from apps.subsidies.calculation import estimate_subsidies
 from apps.surveys.models import RevisionStatus, Survey
 
-from .models import QuotationSettings, Quote, QuoteLine, QuoteRequest, QuoteRevision, QuoteStatus
+from .models import (Acceptance, AcceptanceChannel, QuotationSettings, Quote, QuoteLine,
+                     QuoteRequest, QuoteRevision, QuoteStatus)
 
 PAISE = Decimal("0.01")  # INR: round each line's net and tax half up to one paisa.
 PERCENT = Decimal("100")
@@ -200,7 +201,7 @@ def quote_action(pk, action, data, actor):
     Survey.objects.select_for_update().get(pk=initial.survey_revision.survey_id)
     Quote.objects.select_for_update().get(pk=initial.quote_id)
     quotation = QuoteRevision.objects.select_for_update().select_related("quote", "survey_revision", "package_version").get(pk=pk)
-    request_hash = content_hash({"action": action, "pk": pk, **data})
+    request_hash = request_fingerprint(action, pk, data)
     previous_request = QuoteRequest.objects.filter(actor=actor, key=data["idempotency_key"]).first()
     if previous_request:
         if previous_request.payload_hash != request_hash:
@@ -209,6 +210,8 @@ def quote_action(pk, action, data, actor):
     check_revision(quotation, data)
     if action == "issue":
         issue_quote(quotation, actor)
+    elif action == "accept":
+        accept_quote(quotation, data, actor)
     elif action == "reject":
         if quotation.status != QuoteStatus.ISSUED or quotation.valid_until < business_date():
             raise ValidationError({"status": ["Only a current Issued quotation can be rejected."]})
@@ -242,6 +245,47 @@ def issue_quote(quotation, actor):
         "issued_at": quotation.issued_at, "issued_by": actor, "valid_until": quotation.valid_until,
         "content_hash": quotation.content_hash,
     })
+
+
+def request_fingerprint(action, pk, data):
+    """
+    Identifies a retry by the values the caller decided.
+
+    An uploaded file is skipped: two uploads of the same signature are
+    different objects, so hashing one would make every retry look new.
+    """
+    decided = {key: value for key, value in data.items()
+               if isinstance(value, (str, int, float, bool, type(None)))}
+    return content_hash({"action": action, "pk": pk, **decided})
+
+
+def accept_quote(quotation, data, actor):
+    """
+    Records the customer's signature and takes the quotation to Accepted.
+
+    Only a currently valid issued quotation can be signed, and the stored
+    document must still hash to what was issued: the customer signs what
+    is on the screen, so if the document moved underneath, the signature
+    would be evidence of nothing.
+    """
+    if quotation.status != QuoteStatus.ISSUED or quotation.valid_until < business_date():
+        raise ValidationError({"status": ["Only a current Issued quotation can be accepted."]})
+
+    if content_hash(document_content(quotation)) != quotation.content_hash:
+        raise ValidationError({"document": [
+            "This quotation no longer matches the document that was issued."]})
+
+    Acceptance.objects.create(
+        quotation=quotation,
+        channel=AcceptanceChannel.SUPERVISED,
+        customer_name=data["customer_name"],
+        signature=data["signature"],
+        document_content_hash=quotation.content_hash,
+        witnessed_by=actor,
+        accepted_at=timezone.now(),
+    )
+    transition(quotation, QuoteStatus.ACCEPTED, actor,
+               reason=f"Accepted by {data['customer_name']}.")
 
 
 def transition(quotation, status, actor, *, reason="", extras=None):

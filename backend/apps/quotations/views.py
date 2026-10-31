@@ -11,7 +11,10 @@ from apps.core.models import AuditEvent
 from apps.core.serializers import AuditEventSerializer
 from django.shortcuts import get_object_or_404
 from .models import QuoteRevision, QuoteStatus
-from .serializers import ActionSerializer, GenerateSerializer, QuoteSerializer
+from rest_framework.parsers import FormParser, MultiPartParser
+
+from .serializers import (AcceptSerializer, ActionSerializer, GenerateSerializer,
+                          PresentationSerializer, QuoteSerializer)
 from .services import generate_quote, quote_action
 
 
@@ -82,4 +85,37 @@ class QuoteActionView(APIView):
         serializer = ActionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         quotation = quote_action(pk, action, serializer.validated_data, request.user)
+        return Response(QuoteSerializer(quotation, context={"request": request}).data)
+
+
+class QuotePresentView(generics.RetrieveAPIView):
+    """
+    The restricted view a customer is handed the tablet to read.
+
+    Same staff sign-in as everything else, because the device belongs to
+    the staff member. What changes is the payload: one document, no
+    actions, no record ids, nobody else's data.
+    """
+
+    permission_classes = [QuoteAccess]
+    serializer_class = PresentationSerializer
+    queryset = quotations_with_lines()
+
+
+class QuoteAcceptView(APIView):
+    """
+    Takes the customer's signature and accepts the quotation.
+
+    Separate from the generic action route because it carries a file, but
+    it goes through the same locked, idempotent action path so acceptance
+    obeys the same concurrency rules as every other document action.
+    """
+
+    permission_classes = [QuoteAccess]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, pk):
+        serializer = AcceptSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        quotation = quote_action(pk, "accept", serializer.validated_data, request.user)
         return Response(QuoteSerializer(quotation, context={"request": request}).data)

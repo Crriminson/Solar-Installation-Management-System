@@ -3,7 +3,8 @@
 from rest_framework import serializers
 
 from apps.core.api import business_date
-from .models import QuoteLine, QuoteRevision, QuoteStatus
+from apps.uploads import validate_image
+from .models import Acceptance, QuoteLine, QuoteRevision, QuoteStatus
 
 
 class GenerateSerializer(serializers.Serializer):
@@ -61,7 +62,58 @@ class QuoteSerializer(serializers.ModelSerializer):
         if quotation.status == QuoteStatus.DRAFT and not self.get_requires_survey_review(quotation):
             actions.append("issue")
         if self.get_display_status(quotation) == QuoteStatus.ISSUED:
+            actions.append("accept")
             actions.append("reject")
         if quotation.status != QuoteStatus.ACCEPTED:
             actions.append("generate_revision")
         return actions
+
+
+# ============================================================
+# Acceptance and the customer-facing view (F06)
+# ============================================================
+
+class AcceptSerializer(ActionSerializer):
+    """A supervised signature, taken on a staff device."""
+
+    customer_name = serializers.CharField(max_length=150)
+    signature = serializers.ImageField()
+
+    def validate_customer_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("The customer types their own name.")
+        return value.strip()
+
+    def validate_signature(self, value):
+        return validate_image(value)
+
+
+class AcceptanceSerializer(serializers.ModelSerializer):
+    witnessed_by_name = serializers.CharField(source="witnessed_by.get_full_name", default="")
+
+    class Meta:
+        model = Acceptance
+        fields = ["id", "channel", "customer_name", "signature", "document_content_hash",
+                  "witnessed_by", "witnessed_by_name", "accepted_at"]
+
+
+class PresentationSerializer(serializers.ModelSerializer):
+    """
+    The quotation as the customer sees it when signing.
+
+    Deliberately narrow: their document and nothing else. No staff
+    actions, no internal record ids, no other customer anywhere.
+    """
+
+    reference = serializers.CharField(source="quote.reference")
+    lines = QuoteLineSerializer(many=True, read_only=True)
+    accepted = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QuoteRevision
+        fields = ["reference", "revision_number", "status", "snapshot", "subsidy", "terms",
+                  "lines", "subtotal_excl_tax", "tax_amount", "gross_payable_incl_tax",
+                  "valid_until", "issued_at", "content_hash", "accepted"]
+
+    def get_accepted(self, quotation):
+        return hasattr(quotation, "acceptance")
