@@ -159,9 +159,12 @@ Administrator, Sales, Operations Manager, Warehouse, Technician, Support,
 Finance, Director. One staff member may hold several roles.
 
 The customer is not a system user. They submit the public enquiry form,
-sign on a staff-held device under supervision, receive exported
-documents, and — once Telegram is implemented — interact through the bot.
-There is no customer dashboard.
+accept and sign either on a staff-held device under supervision or
+remotely through a single-use link sent over Telegram (F06, F16), and
+receive their generated documents on that channel.
+
+There is still no customer dashboard. A signing link is one document and
+one action, and it expires. It is not an account and not a portal.
 
 Permissions per role are defined in rules.md.
 
@@ -343,13 +346,35 @@ Rules:
 
 ### F06 — Acceptance and signatures
 
-Staff present the quotation on a phone or tablet in a restricted view
-that shows the customer their document and nothing else — no margins, no
-other customers, no staff navigation.
+A quotation is accepted one of two ways. Both produce the same
+acceptance record and carry the same weight. They differ only in how the
+customer was identified and who witnessed the act.
+
+**Supervised.** Staff present the quotation on a phone or tablet in a
+restricted view that shows the customer their document and nothing else
+— no margins, no other customers, no staff navigation.
+
+**Remote, over Telegram.** Staff send the issued quotation PDF and a
+signing link to the customer's linked chat. The link opens that one
+document in the same restricted view, without a sign-in, and offers
+accept or decline with a typed name and a signature.
+
+A signing link is single-use, expires, is bound to the chat ID of a
+verified customer, and names the exact quotation revision it was issued
+for. Reissuing a quotation invalidates every outstanding link for it. A
+spent or expired link shows its document read-only and offers nothing.
 
 An acceptance record captures explicit acceptance, the customer's name,
-the signature image, the server timestamp, the witnessing staff member,
-and the exact document revision with a content hash.
+the signature image, the server timestamp, the exact document revision
+with a content hash, and how acceptance was captured:
+
+- supervised — the witnessing staff member;
+- remote — the chat ID, the link's token identifier and its issue time.
+
+A remote acceptance has no witness, so the verified binding and the
+single-use token are the evidence in place of one. A customer who is not
+linked on Telegram, or whose binding has been revoked, can only accept
+under supervision.
 
 Quotation acceptance, installation acceptance (F11) and service
 resolution confirmation (F13) are three separate records. None implies
@@ -609,10 +634,15 @@ user's permissions. There are no anonymous public financial views.
 Telegram is in scope and is built after the core workflows are working.
 It gives the customer a channel without building them a dashboard.
 
+F06's remote acceptance path belongs to this phase. F06 ships with
+supervised signing first, so quotation acceptance never waits on the
+bot, and the remote path is added when the bot lands.
+
 Customer side: link an account using a staff-issued single-use expiring
-token, receive relevant status updates, raise a service complaint with
-attachments, receive visit updates, and confirm resolution or ask for
-more help.
+token, receive the quotation PDF with a signing link and accept or
+decline it there (F06), receive generated documents (F19) and relevant
+status updates, raise a service complaint with attachments, receive
+visit updates, and confirm resolution or ask for more help.
 
 Staff side: receive assigned-ticket notifications, read customer replies
 inside the application, and escalate to a person.
@@ -622,6 +652,9 @@ Security:
   revocable.
 - Never disclose a record because someone typed a phone number or serial
   into the chat.
+- A signing link is single-use, expiring, and bound to one chat ID and
+  one document revision. A leaked link is useless once spent or expired,
+  and it never exposes anything beyond its own document.
 - Deduplicate incoming updates; keep tokens and credentials out of logs.
 
 Implementation: long polling for the local deployment; outgoing messages
@@ -702,6 +735,10 @@ Required documents:
 
 A document generated from a snapshot reproduces that snapshot, not
 current catalogue data.
+
+Documents reach the customer from the staff member or, once F16 exists,
+over Telegram. Delivery never regenerates a document: the customer
+receives the stored file, content hash and all.
 
 ### F20 — Work queues and notifications
 

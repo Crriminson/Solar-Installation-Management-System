@@ -69,6 +69,7 @@ Not done:
 | D037 | Survey review, not only approval, is limited to operations managers and administrators | Confirmed | Sending back and rejecting are the same decision as approving. rules.md section 4 |
 | D038 | An approved survey revision becomes Superseded when a newer one is approved | Confirmed | Builder decision 2026-10-31. spec.md F03 requires revising an approved survey. The approval stands until replaced, so a quotation always has one source |
 | D039 | Purchase cost is visible to Finance, Director, Operations Manager and Administrator only | Confirmed | Sales must not see it. rules.md section 4. The operations manager maintains the catalogue, so needs it |
+| D040 | Quotation PDF, approval and signing delivered over Telegram, as a second acceptance path beside supervised signing | Confirmed | Owner decision 2026-10-31 after testing F01-F04. Gives the customer a channel without building a dashboard. Affects spec.md section 5, F06, F16 and F19 |
 | D040 | Taking a package version live needs an Administrator | Confirmed | Implements the owner review in D028. Operations managers maintain packages but cannot activate them |
 | D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
 | D042 | Dummy component packages may be authored for development at all required capacities | Confirmed | Owner, 2026-10-31: "you can create dummies or find some samples online". They remain clearly labelled, unreviewed and inactive until explicit administrator review; no claim of electrical compatibility |
@@ -174,6 +175,7 @@ Corroborating official sources for central, Delhi and UP:
 |---|---|---|---|
 | 1 | PostgreSQL 17 → 16 | Owner, 2026-10-31 | spec.md §3 table. No requirement changes; 16.13 already running, no 17-only feature used |
 | 2 | Superseded added to the survey revision states | AtharvK-28, 2026-10-31 | F03 states. Needed to meet F03's rule that later changes create a new revision (D038) |
+| 3 | Quotation delivery and acceptance over Telegram | Owner, 2026-10-31 | spec.md section 5, F06, F16, F19. Was: acceptance only by supervised signing on a staff-held device, witnessed by the staff member. Now: a second remote path, where staff send the issued PDF and a single-use expiring signing link to the customer's linked chat, and the binding plus token stand in for the witness. Lands with F16; F06 still ships supervised-first so acceptance never waits on the bot. No customer dashboard is added, so D008 stands |
 
 Each entry records: the owner's instruction, previous behaviour, new
 behaviour, affected requirement IDs, and the date.
