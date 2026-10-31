@@ -72,6 +72,7 @@ DATABASES = {
 # ============================================================
 
 OUR_APPS = [
+    "apps.core",
     "apps.accounts",
     "apps.customers",
     "apps.surveys",
@@ -105,9 +106,9 @@ REST_FRAMEWORK = {
     # Everything requires login unless a view opts out, such as the
     # public enquiry form.
     "DEFAULT_PERMISSION_CLASSES": [
-        "rest_framework.permissions.IsAuthenticated",
+        "apps.core.api.ActiveStaff",
     ],
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS": "apps.core.api.BoundedPagination",
     "PAGE_SIZE": DEFAULT_PAGE_SIZE,
     "DEFAULT_THROTTLE_RATES": {
         "public_enquiry": PUBLIC_ENQUIRY_RATE,

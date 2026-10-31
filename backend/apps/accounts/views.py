@@ -18,6 +18,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
+from apps.core.api import ActiveStaff
 
 from apps.catalogue.permissions import (
     can_manage_catalogue,
@@ -65,7 +66,7 @@ class SessionView(APIView):
 
     def get(self, request):
         user = request.user
-        return Response({"user": describe_staff(user) if user.is_authenticated else None})
+        return Response({"user": describe_staff(user) if user.is_authenticated and user.is_active_staff else None})
 
 
 @method_decorator(csrf_protect, name="dispatch")
@@ -119,7 +120,7 @@ class StaffListView(APIView):
     names only: no contact details, and nothing about roles.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [ActiveStaff]
 
     def get(self, request):
         staff = get_user_model().objects.filter(
@@ -127,5 +128,6 @@ class StaffListView(APIView):
         ).order_by("first_name", "last_name", "id")
 
         return Response(
-            [{"id": user.id, "name": user.get_full_name() or user.username} for user in staff]
+            [{"id": user.id, "name": user.get_full_name() or user.username,
+              "roles": user.roles, "is_administrator": user.has_role("administrator")} for user in staff]
         )

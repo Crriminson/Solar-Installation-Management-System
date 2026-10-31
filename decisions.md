@@ -70,6 +70,7 @@ Not done:
 | D039 | Purchase cost is visible to Finance, Director, Operations Manager and Administrator only | Confirmed | Sales must not see it. rules.md section 4. The operations manager maintains the catalogue, so needs it |
 | D040 | Taking a package version live needs an Administrator | Confirmed | Implements the owner review in D028. Operations managers maintain packages but cannot activate them |
 | D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
+| D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
 
 ## 3. Resolved decisions and their consequences
 
