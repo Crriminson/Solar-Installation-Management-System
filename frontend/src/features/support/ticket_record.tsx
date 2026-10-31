@@ -21,8 +21,9 @@ import DataTable, { type Column } from "../../components/DataTable";
 import { FileField, SelectField, TextAreaField, TextField, type Option } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
+import { useToast } from "../../components/ToastContext";
 import { dateTimeInputToIso, formatDate, formatDateTime, formatMoney, formatQuantity,
          nowForDateTimeInput } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
@@ -49,6 +50,9 @@ interface ActionSpec {
   note?: string;
   fields: readonly DialogField[];
   submit: (values: Record<string, string>) => Promise<unknown>;
+  /* Said once the action lands. Only the outcomes worth confirming out
+     loud carry one; the rest update in place. */
+  done?: string;
 }
 
 export default function TicketRecord() {
@@ -57,7 +61,7 @@ export default function TicketRecord() {
     queryKey: ["tickets", "detail", ticketId], queryFn: () => fetchTicket(ticketId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading ticket…" />;
+  if (result.isPending) return <LoadingRecord label="Loading ticket…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <TicketDetails ticket={result.data} />;
 }
@@ -179,6 +183,7 @@ function TicketDetails({ ticket }: { ticket: Ticket }) {
       note: "Only the customer's word closes a ticket.",
       fields: [{ name: "customer_name", label: "Who confirmed it", required: true }],
       submit: (values) => act("confirm", values),
+      done: `Ticket ${ticket.reference} closed`,
     },
     "send-back": {
       title: "The customer says it is not fixed", confirm: "Send back",
@@ -503,7 +508,11 @@ function ActionDialog({ spec, onClose, onDone }: {
   const set = (name: string) => (value: string) =>
     setValues((current) => ({ ...current, [name]: value }));
 
-  const mutation = useMutation({ mutationFn: () => spec.submit(values), onSuccess: onDone });
+  const confirm = useToast();
+  const mutation = useMutation({
+    mutationFn: () => spec.submit(values),
+    onSuccess: () => { if (spec.done) confirm(spec.done); onDone(); },
+  });
   const complete = spec.fields.every((field) => !field.required || values[field.name]?.trim());
 
   return <ConfirmDialog title={spec.title} confirmLabel={spec.confirm} pending={mutation.isPending}

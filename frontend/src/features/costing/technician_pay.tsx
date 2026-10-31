@@ -108,6 +108,7 @@ export default function TechnicianPay() {
     {rating && <RateDialog summary={rating} onClose={() => setRating(null)}
       onDone={() => { setRating(null); refresh(); }} />}
     {reversing && <ReasonDialog title={`Reverse ${formatMoney(reversing.amount)}?`}
+      confirmation={`Payment of ${formatMoney(reversing.amount)} to ${reversing.technician_name} reversed`}
       onSubmit={(reason) => reverseTechnicianPayment(reversing.id, reason)}
       onClose={() => setReversing(null)}
       onDone={() => { setReversing(null); refresh(); }} />}

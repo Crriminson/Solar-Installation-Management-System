@@ -18,7 +18,7 @@ import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import { SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { dateTimeForInput, dateTimeInputToIso, nowForDateTimeInput } from "../../lib/format";
 import { addInstalledUnit, addPhoto, fetchReport, submitReport,
@@ -34,7 +34,7 @@ export default function InstallationForm() {
     queryFn: () => fetchReport(reportId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading the form…" />;
+  if (result.isPending) return <LoadingRecord label="Loading the form…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <Form report={result.data} />;
 }

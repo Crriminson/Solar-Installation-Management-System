@@ -16,7 +16,7 @@ import Button, { ButtonLink } from "../../components/Button";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { dateTimeForInput, dateTimeInputToIso, formatDateTime } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
@@ -33,7 +33,7 @@ export default function JobRecord() {
     queryKey: ["jobs", jobId], queryFn: () => fetchJob(jobId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading job…" />;
+  if (result.isPending) return <LoadingRecord label="Loading job…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <JobDetails job={result.data} />;
 }

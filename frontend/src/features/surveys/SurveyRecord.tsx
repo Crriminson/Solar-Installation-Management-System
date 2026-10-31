@@ -20,10 +20,11 @@ import DataTable, { type Column } from "../../components/DataTable";
 import { FileField, SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { EmptyMessage, ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import StatusPath from "../../components/StatusPath";
 import { REVISION_STATUSES } from "../../components/status";
+import { useToast } from "../../components/ToastContext";
 import { formatDate, formatDateTime, formatQuantity } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
 import { fetchStaff } from "../enquiries/api";
@@ -56,7 +57,7 @@ export default function SurveyRecord() {
     queryFn: () => fetchSurvey(surveyId),
   });
 
-  if (isPending) return <LoadingMessage label="Loading survey…" />;
+  if (isPending) return <LoadingRecord label="Loading survey…" />;
   if (isError) return <ErrorMessage error={error} onRetry={refetch} />;
 
   const latest = survey.revisions[0];
@@ -190,19 +191,23 @@ function SubmitAction({ revision, survey }: { revision: SurveyRevision; survey: 
   );
 }
 
-/* What each decision does, said before it happens. */
-const DECISIONS: Record<ReviewDecision, { label: string; effect: string }> = {
+/* What each decision does, said before it happens, and how it is
+   confirmed once it has. */
+const DECISIONS: Record<ReviewDecision, { label: string; effect: string; done: string }> = {
   approved: {
     label: "Approve",
     effect: "Quotations can then be built from it, and it can no longer change.",
+    done: "approved",
   },
   changes_requested: {
     label: "Request changes",
     effect: "The technician corrects this revision and resubmits. The previous submission is retained in the audit history.",
+    done: "sent back for changes",
   },
   rejected: {
     label: "Reject",
     effect: "This revision will not be used for a quotation.",
+    done: "rejected",
   },
 };
 
@@ -211,12 +216,15 @@ function ReviewPanel({ revision, survey }: { revision: SurveyRevision; survey: S
   const queryClient = useQueryClient();
   const [notes, setNotes] = useState("");
   const [decision, setDecision] = useState<ReviewDecision | null>(null);
+  const confirm = useToast();
 
   const mutation = useMutation({
     mutationFn: (chosen: ReviewDecision) =>
       reviewRevision(revision.id, { decision: chosen, notes, revision: revision.revision }),
-    onSuccess: () => {
+    onSuccess: (_, chosen) => {
       setDecision(null);
+      confirm(`Survey revision ${revision.revision_number} for ${survey.customer_name} ` +
+              DECISIONS[chosen].done);
       queryClient.invalidateQueries({ queryKey: ["surveys"] });
     },
   });

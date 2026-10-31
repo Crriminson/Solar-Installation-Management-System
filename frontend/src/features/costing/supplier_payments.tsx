@@ -96,6 +96,7 @@ export default function SupplierPayments({ purchaseId, hasInvoice }: {
     {error && <p className={styles.error}>{describeError(error)}</p>}
 
     {reversing && <ReasonDialog title={`Reverse ${formatMoney(reversing.amount)}?`}
+      confirmation={`Supplier payment of ${formatMoney(reversing.amount)} reversed`}
       onSubmit={(reason) => reverseSupplierPayment(reversing.id, reason)}
       onClose={() => setReversing(null)}
       onDone={() => { setReversing(null); refresh(); }} />}

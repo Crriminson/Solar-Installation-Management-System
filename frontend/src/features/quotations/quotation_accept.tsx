@@ -22,7 +22,8 @@ import { TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import SignaturePad from "../../components/signature_pad";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
+import { useToast } from "../../components/ToastContext";
 import { formatDate, formatMoney, formatQuantity } from "../../lib/format";
 import { acceptQuotation, fetchPresentation, fetchQuotation } from "./api";
 import type { Presentation, QuoteLine } from "./types";
@@ -41,7 +42,7 @@ export default function QuotationAccept() {
     queryFn: () => fetchPresentation(quoteId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading quotation…" />;
+  if (result.isPending) return <LoadingRecord label="Loading quotation…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <SigningView quoteId={quoteId} document={result.data} />;
 }
@@ -52,6 +53,7 @@ function SigningView({ quoteId, document }: { quoteId: string; document: Present
   const key = useRef(crypto.randomUUID());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const confirm = useToast();
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -61,6 +63,7 @@ function SigningView({ quoteId, document }: { quoteId: string; document: Present
                              customerName, signature!);
     },
     onSuccess: () => {
+      confirm(`Quotation ${document.reference} accepted`);
       queryClient.invalidateQueries({ queryKey: ["quotations"] });
       navigate(`/quotations/${quoteId}`);
     },

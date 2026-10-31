@@ -11,9 +11,10 @@ import DataTable, { type Column } from "../../components/DataTable";
 import { TextAreaField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { QUOTE_STATUSES } from "../../components/status";
+import { useToast } from "../../components/ToastContext";
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from "../../lib/format";
 import { useNavigate } from "react-router-dom";
 import { confirmOrder } from "../orders/api";
@@ -33,7 +34,7 @@ const COLUMNS: readonly Column<QuoteLine>[] = [
 export default function QuotationRecord() {
   const { quoteId = "" } = useParams();
   const result = useQuery({ queryKey: ["quotations", quoteId], queryFn: () => fetchQuotation(quoteId) });
-  if (result.isPending) return <LoadingMessage label="Loading quotation…" />;
+  if (result.isPending) return <LoadingRecord label="Loading quotation…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <QuotationDetails key={result.data.id} quotation={result.data} />;
 }
@@ -45,15 +46,25 @@ function QuotationDetails({ quotation }: { quotation: Quotation }) {
   const [reason, setReason] = useState("");
   const key = useRef(crypto.randomUUID());
   const queryClient = useQueryClient();
+  const confirm = useToast();
   const mutation = useMutation({
     mutationFn: () => quotationAction(actionQuotation!, action!, key.current, reason),
-    onSuccess: () => { setAction(null); queryClient.invalidateQueries({ queryKey: ["quotations"] }); },
+    onSuccess: (updated) => {
+      confirm(action === "issue"
+        ? `Quotation ${updated.reference} revision ${updated.revision_number} issued`
+        : `Rejection of ${updated.reference} recorded`);
+      setAction(null);
+      queryClient.invalidateQueries({ queryKey: ["quotations"] });
+    },
   });
 
   const navigate = useNavigate();
   const confirmation = useMutation({
     mutationFn: () => confirmOrder(quotation.id),
-    onSuccess: (order) => navigate(`/orders/${order.id}`),
+    onSuccess: (order) => {
+      confirm(`Order ${order.reference} confirmed`);
+      navigate(`/orders/${order.id}`);
+    },
   });
 
   function openAction(next: string) {

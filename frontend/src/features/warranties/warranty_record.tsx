@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import DataTable, { type Column } from "../../components/DataTable";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { formatDate, formatDateTime } from "../../lib/format";
 import { STOCK_STATUSES } from "../inventory/status";
@@ -30,7 +30,7 @@ export default function WarrantyRecord() {
     queryFn: () => fetchWarranty(warrantyId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading warranty…" />;
+  if (result.isPending) return <LoadingRecord label="Loading warranty…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <WarrantyDetails warranty={result.data} />;
 }

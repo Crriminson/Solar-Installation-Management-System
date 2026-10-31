@@ -18,9 +18,10 @@ import { SelectField, TextField } from "../../components/Field";
 import FilterTabs from "../../components/FilterTabs";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { EmptyMessage, ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { PACKAGE_NOT_LIVE, VERSION_STATUSES } from "../../components/status";
+import { useToast } from "../../components/ToastContext";
 import { formatDateTime, formatQuantity } from "../../lib/format";
 import { useStaffUser } from "../auth/session";
 import {
@@ -45,7 +46,7 @@ export default function PackageRecord() {
     queryFn: () => fetchPackage(packageId),
   });
 
-  if (isPending) return <LoadingMessage label="Loading package…" />;
+  if (isPending) return <LoadingRecord label="Loading package…" />;
   if (isError) return <ErrorMessage error={error} onRetry={refetch} />;
 
   const chosen = params.get("version");
@@ -151,11 +152,13 @@ function ReviewAction({
 }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const confirm = useToast();
 
   const mutation = useMutation({
     mutationFn: () => activateVersion(version.id, version.revision),
     onSuccess: () => {
       setConfirming(false);
+      confirm(`${template.name} version ${version.version_number} is live`);
       queryClient.invalidateQueries({ queryKey: ["packages"] });
     },
   });

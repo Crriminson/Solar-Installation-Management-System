@@ -24,6 +24,7 @@ import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
+import { useToast } from "../../components/ToastContext";
 import { formatDateTime, formatQuantity, nowForDateTimeInput,
          dateTimeInputToIso } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
@@ -51,9 +52,17 @@ function Bench({ fulfilment }: { fulfilment: Fulfilment }) {
   const user = useStaffUser();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["fulfilments"] });
+  const confirm = useToast();
 
+  /* A shortage is a successful request that blocks the order, not an
+     error, so only an actual reservation is confirmed. The block shows
+     in its own banner, which stays until the stock arrives. */
   const reserving = useMutation({
-    mutationFn: () => reserveStock(fulfilment), onSuccess: refresh,
+    mutationFn: () => reserveStock(fulfilment),
+    onSuccess: (updated) => {
+      if (updated.status === "reserved") confirm(`Stock reserved for ${updated.order_reference}`);
+      refresh();
+    },
   });
   const closing = useMutation({
     mutationFn: () => closePacking(fulfilment), onSuccess: refresh,
@@ -232,8 +241,10 @@ function DispatchPanel({ fulfilment, onDone }: {
   fulfilment: Fulfilment; onDone: () => void;
 }) {
   const [carrier, setCarrier] = useState("");
+  const confirm = useToast();
   const mutation = useMutation({
-    mutationFn: () => dispatchOrder(fulfilment, carrier), onSuccess: onDone,
+    mutationFn: () => dispatchOrder(fulfilment, carrier),
+    onSuccess: (updated) => { confirm(`${updated.order_reference} dispatched`); onDone(); },
   });
 
   return <section className={styles.section}>
@@ -262,6 +273,7 @@ function DeliveryPanel({ fulfilment, onDone }: {
   const [deliveredAt, setDeliveredAt] = useState(nowForDateTimeInput());
   const [recipient, setRecipient] = useState("");
   const [notes, setNotes] = useState("");
+  const confirm = useToast();
 
   const mutation = useMutation({
     mutationFn: () => recordDelivery(fulfilment, {
@@ -269,7 +281,11 @@ function DeliveryPanel({ fulfilment, onDone }: {
       received_by_name: recipient,
       delivery_notes: notes,
     }),
-    onSuccess: () => { setOpen(false); onDone(); },
+    onSuccess: (updated) => {
+      setOpen(false);
+      confirm(`${updated.order_reference} delivered`);
+      onDone();
+    },
   });
 
   return <section className={styles.section}>

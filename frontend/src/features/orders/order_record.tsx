@@ -17,7 +17,7 @@ import DataTable, { type Column } from "../../components/DataTable";
 import { SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { useToast } from "../../components/ToastContext";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
@@ -37,7 +37,7 @@ export default function OrderRecord() {
     queryFn: () => fetchOrder(orderId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading order…" />;
+  if (result.isPending) return <LoadingRecord label="Loading order…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <OrderDetails order={result.data} />;
 }
@@ -273,13 +273,20 @@ function PaymentForm({ order, onClose, onSaved }: {
   const [kind, setKind] = useState("receipt");
   const [status, setStatus] = useState("cleared");
   const [paidOn, setPaidOn] = useState(businessToday());
+  const confirm = useToast();
 
+  /* The amount comes from the saved payment, not the input, so the
+     toast repeats what the server recorded. */
   const mutation = useMutation({
     mutationFn: () => recordPayment(order.id, {
       kind, amount, method, external_reference: externalReference,
       status, paid_on: paidOn,
     }),
-    onSuccess: onSaved,
+    onSuccess: (payment) => {
+      const what = payment.kind === "refund" ? "Refund" : "Payment";
+      confirm(`${what} of ${formatMoney(payment.amount)} recorded on ${order.reference}`);
+      onSaved();
+    },
   });
 
   return <ConfirmDialog title={`Record payment on ${order.reference}`}

@@ -80,6 +80,7 @@ export default function TimeSection({ jobId, crew }: { jobId: number; crew: numb
     {mutation.isError && <p className={styles.error}>{describeError(mutation.error)}</p>}
 
     {reversing && <ReasonDialog title="Reverse these hours?"
+      confirmation={`${formatQuantity(reversing.hours, "h")} for ${reversing.technician_name} reversed`}
       onSubmit={(reason) => reverseTime(reversing.id, reason)}
       onClose={() => setReversing(null)}
       onDone={() => { setReversing(null); refresh(); }} />}

@@ -19,7 +19,7 @@ import DataTable, { type Column } from "../../components/DataTable";
 import { TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { businessToday, formatDate, formatMoney, formatQuantity } from "../../lib/format";
 import SupplierPayments from "../costing/supplier_payments";
@@ -57,7 +57,7 @@ export default function PurchaseRecord() {
     queryFn: () => fetchPurchaseOrder(purchaseId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading purchase order…" />;
+  if (result.isPending) return <LoadingRecord label="Loading purchase order…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <PurchaseDetails purchase={result.data} />;
 }

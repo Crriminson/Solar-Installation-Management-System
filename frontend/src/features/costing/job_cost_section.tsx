@@ -105,6 +105,7 @@ function Expenses({ orderId, canMoveMoney, onChanged }: {
     {mutation.isError && <p className={styles.error}>{describeError(mutation.error)}</p>}
 
     {reversing && <ReasonDialog title={`Reverse ${reversing.description}?`}
+      confirmation={`${reversing.description} reversed`}
       onSubmit={(reason) => reverseExpense(reversing.id, reason)}
       onClose={() => setReversing(null)}
       onDone={() => { setReversing(null); onChanged(); }} />}

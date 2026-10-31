@@ -20,7 +20,8 @@ import Button from "../../components/Button";
 import { TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import SignaturePad from "../../components/signature_pad";
-import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
+import { useToast } from "../../components/ToastContext";
 import { formatDateTime } from "../../lib/format";
 import { decide, fetchReport } from "./api";
 import type { InstallationReport } from "./types";
@@ -33,7 +34,7 @@ export default function InstallationAccept() {
     queryFn: () => fetchReport(reportId),
   });
 
-  if (result.isPending) return <LoadingMessage label="Loading…" />;
+  if (result.isPending) return <LoadingRecord label="Loading…" />;
   if (result.isError) return <ErrorMessage error={result.error} onRetry={result.refetch} />;
   return <Handover report={result.data} />;
 }
@@ -45,7 +46,10 @@ function Handover({ report }: { report: InstallationReport }) {
   const [signature, setSignature] = useState<Blob | null>(null);
   const [refusing, setRefusing] = useState(false);
   const [refusalReason, setRefusalReason] = useState("");
+  const confirm = useToast();
 
+  /* A refusal is a recorded outcome that sends the job back, not a
+     failure, so it is confirmed just as an acceptance is. */
   const mutation = useMutation({
     mutationFn: (choice: "accepted" | "refused") => decide(report, {
       decision: choice,
@@ -53,7 +57,10 @@ function Handover({ report }: { report: InstallationReport }) {
       signature: choice === "accepted" ? signature : null,
       refusalReason: choice === "refused" ? refusalReason : undefined,
     }),
-    onSuccess: () => {
+    onSuccess: (_, choice) => {
+      confirm(choice === "accepted"
+        ? `Installation for ${report.customer_name} accepted`
+        : `Refusal by ${report.customer_name} recorded`);
       queryClient.invalidateQueries({ queryKey: ["installations"] });
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       navigate(`/installations/${report.id}`);
