@@ -20,15 +20,16 @@
   font-size: var(--text-sm);
   color: var(--color-text-muted);
   border-top: 3px solid var(--color-border);
+  transition: border-top-color var(--motion-settle) var(--ease-out);
 }
 
 .passed {
   color: var(--color-text);
-  border-top-color: var(--color-border-strong);
+  border-top-color: var(--color-primary-soft);
 }
 
 .current {
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--color-text);
   border-top-color: var(--color-primary);
 }

@@ -1,6 +1,7 @@
 /* Cue: a count and its label, as a link. */
 
 .cue {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
@@ -11,24 +12,60 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  transition: background-color var(--motion-fast);
+  box-shadow: var(--shadow-raised);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out),
+    transform var(--motion-fast) var(--ease-out);
 }
 
 .cue:hover {
-  background: var(--color-hover);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-pop);
+  transform: translateY(-1px);
+}
+
+.cue:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-raised);
 }
 
 .count {
-  font-size: 2.25rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
   font-variant-numeric: tabular-nums;
 }
 
 .label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
+}
+
+/* The arrow stays quiet until the cue is pointed at: on a queue of ten
+   cues, ten arrows at full strength is noise. */
+.go {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  color: var(--color-text-faint);
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-out);
+}
+
+.cue:hover .go,
+.cue:focus-visible .go {
+  opacity: 1;
+}
+
+/* Something is late. The icon in the label says so as well as the
+   colour, because colour alone is not a signal. */
+.urgent {
+  border-color: var(--tone-blocked-border);
 }
 
 .urgent .count,

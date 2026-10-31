@@ -2,10 +2,14 @@
 
 .header {
   margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .back {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   margin-bottom: var(--space-2);
   font-size: var(--text-sm);
   color: var(--color-text-muted);
@@ -14,6 +18,16 @@
 
 .back:hover {
   color: var(--color-primary);
+}
+
+/* The caret slides back a little on hover: the direction the link
+   goes, shown rather than described. */
+.back svg {
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.back:hover svg {
+  transform: translateX(-2px);
 }
 
 .top {
@@ -29,19 +43,38 @@
 }
 
 .title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   margin: 0;
   font-size: var(--text-xl);
-  letter-spacing: -0.01em;
+  font-weight: var(--weight-semibold);
+  letter-spacing: -0.02em;
   overflow-wrap: anywhere;
 }
 
 .subtitle {
   margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
   color: var(--color-text-muted);
+  text-wrap: pretty;
 }
 
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+@media (max-width: 899px) {
+  .actions {
+    width: 100%;
+  }
+
+  /* One primary action per view, and on a phone it is worth the full
+     width rather than a thumb-sized target in a corner. */
+  .actions > * {
+    flex: 1;
+  }
 }

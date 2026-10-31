@@ -21,28 +21,99 @@ body {
 body {
   font-family: var(--font-body);
   font-size: var(--text-base);
+  font-weight: var(--weight-normal);
+  line-height: var(--leading-normal);
   color: var(--color-text);
   background: var(--color-background);
-  line-height: 1.5;
+  /* Inter needs this to look like the face it is, not a default sans. */
+  font-feature-settings: "cv05" 1, "cv11" 1;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Every interactive element must show a visible focus ring. */
-:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
-}
 
-h1, h2, h3 {
+/* ============================================================
+   Headings
+
+   A short heading that wraps to two lines should split evenly rather
+   than leave one word alone on the second line.
+   ============================================================ */
+
+h1,
+h2,
+h3 {
   margin: 0 0 var(--space-3);
-  line-height: 1.2;
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.011em;
+  text-wrap: balance;
 }
+
+
+/* ============================================================
+   Figures
+
+   Money, quantities, serials and counts line up in a column only if
+   the digits are the same width.
+   ============================================================ */
+
+th,
+td,
+output,
+time,
+data {
+  font-variant-numeric: tabular-nums;
+}
+
+
+/* ============================================================
+   Interaction
+   ============================================================ */
 
 a {
   color: var(--color-primary);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
 }
 
+/* Every interactive element must show a visible focus ring, and it must
+   appear instantly — a focus ring that fades in reads as lag. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+  transition: none;
+}
+
+button,
+[role="button"],
+summary {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* A dialog's backdrop, from the token rather than a literal colour. */
+::backdrop {
+  background: var(--scrim);
+}
+
+
+/* ============================================================
+   Motion
+
+   Everything that moves must have a still version. Under reduced
+   motion the end state is shown at once, never a shortened animation.
+   ============================================================ */
+
 @media (prefers-reduced-motion: reduce) {
-  * {
-    transition: none !important;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

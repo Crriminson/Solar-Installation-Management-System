@@ -6,7 +6,9 @@ import styles from "./StatusBadge.module.css";
 export default function StatusBadge({ status }: { status: StatusInfo }) {
   return (
     <span className={`${styles.badge} ${styles[status.tone]}`}>
-      <span aria-hidden="true">{TONE_SHAPES[status.tone]}</span>
+      <span className={styles.shape} aria-hidden="true">
+        {TONE_SHAPES[status.tone]}
+      </span>
       {status.label}
     </span>
   );

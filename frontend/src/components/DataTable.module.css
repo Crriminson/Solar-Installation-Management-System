@@ -1,15 +1,25 @@
-/* Data table. Rows are 40px when a cell holds one line of text. */
+/*
+  Data table.
+
+  Rows are 40px when a cell holds one line of text. The head sticks, so
+  a long list still says which column you are reading. On a phone each
+  row becomes a card, because a horizontal scroll hides the status
+  column, which is the one people came for.
+*/
 
 .scroll {
   overflow-x: auto;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow-raised);
 }
 
 .table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-sm);
 }
 
 /* Read by screen readers, and hidden visually. */
@@ -23,7 +33,7 @@
 
 .table th,
 .table td {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2h) var(--space-3);
   text-align: left;
   vertical-align: top;
   border-bottom: 1px solid var(--color-border);
@@ -33,13 +43,20 @@
   border-bottom: none;
 }
 
-/* Table heads are body text, a step smaller - not tracked capitals. */
+/*
+  Table heads are body text, a step smaller - not tracked capitals.
+
+  Not sticky. `overflow-x: auto` on the wrapper makes it a scroll
+  container in both axes, so a sticky head would anchor to the wrapper
+  rather than the viewport and never actually move. A page holds 25
+  rows, so there is little to stick for; giving each list its own
+  scroll region is a per-list decision, not a token.
+*/
 .table th {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   color: var(--color-text-muted);
   white-space: nowrap;
-  background: var(--color-hover);
+  background: var(--color-surface-sunken);
 }
 
 .table .numeric {
@@ -49,33 +66,43 @@
 
 .clickable {
   cursor: pointer;
-  transition: background-color var(--motion-fast);
+  transition: background-color var(--motion-instant) var(--ease-out);
 }
 
 .clickable:hover {
-  background: var(--color-hover);
+  background: var(--color-surface-hover);
 }
 
 .clickable:focus-visible {
   outline-offset: -2px;
 }
 
+/* A selected row is marked at its edge as well as by its fill, so the
+   choice survives a screen that washes out the tint. */
 .selected,
 .selected:hover {
-  background: var(--color-primary-soft);
+  background: var(--color-primary-faint);
+  box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-/* On a phone: one stacked card per row, labelled from the column. */
+
+/* ============================================================
+   Phone: one stacked card per row, labelled from the column
+   ============================================================ */
+
 @media (max-width: 899px) {
   .scroll {
     overflow-x: visible;
     background: none;
     border: none;
+    box-shadow: none;
+    border-radius: 0;
   }
 
   .table,
   .table tbody {
     display: block;
+    font-size: var(--text-sm);
   }
 
   .table thead {
@@ -90,15 +117,20 @@
 
   .table tbody tr {
     display: block;
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-2h) var(--space-3);
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
+    box-shadow: var(--shadow-raised);
+  }
+
+  .table tbody tr:active {
+    background: var(--color-surface-hover);
   }
 
   .table td {
     display: grid;
-    grid-template-columns: 88px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
     gap: var(--space-2);
     padding: var(--space-1) 0;
     border-bottom: none;
@@ -107,7 +139,7 @@
 
   .table td::before {
     content: attr(data-label);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
   }
 
@@ -120,6 +152,7 @@
   }
 
   .selected {
-    background: var(--color-primary-soft);
+    background: var(--color-primary-faint);
+    border-color: var(--color-primary);
   }
 }

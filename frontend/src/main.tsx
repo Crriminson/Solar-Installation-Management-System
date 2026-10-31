@@ -15,8 +15,18 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 
 import App from "./App";
 import { ApiError, isForbidden } from "./api/client";
+import { IconDefaults, ICON_SIZE } from "./design/icons";
 import { SESSION_QUERY_KEY } from "./features/auth/session";
 import "./styles/global.css";
+
+/* Icons inherit the colour of the text they sit beside, and are
+   decorative unless a component says otherwise. Set once, so no screen
+   has to repeat it. */
+const ICON_DEFAULTS = {
+  color: "currentColor",
+  size: ICON_SIZE.control,
+  weight: "regular",
+} as const;
 
 // Server data is considered fresh for 30 seconds before refetching.
 const STALE_TIME_MS = 30_000;
@@ -54,9 +64,11 @@ const queryClient: QueryClient = new QueryClient({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <IconDefaults.Provider value={ICON_DEFAULTS}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </IconDefaults.Provider>
     </QueryClientProvider>
   </StrictMode>,
 );

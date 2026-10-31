@@ -1,18 +1,35 @@
-/* Buttons. Taller on phones, where they are pressed on a roof. */
+/*
+  Buttons. Taller on phones, where they are pressed on a roof.
+
+  Each variant moves by one step when pressed, which is the only
+  feedback that tells a cold thumb through a glove that it connected.
+*/
 
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
   min-height: var(--control-height);
   padding: 0 var(--space-3);
   font: inherit;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
   text-decoration: none;
   border: 1px solid transparent;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background-color var(--motion-fast);
+  transition:
+    background-color var(--motion-instant) var(--ease-out),
+    border-color var(--motion-instant) var(--ease-out),
+    box-shadow var(--motion-instant) var(--ease-out);
+}
+
+.button:active:not(:disabled) {
+  /* Never top or left: this moves without reflowing the row. */
+  transform: translateY(1px);
 }
 
 .button:disabled {
@@ -20,13 +37,29 @@
   cursor: not-allowed;
 }
 
+.iconOnly {
+  padding: 0;
+  width: var(--control-height);
+}
+
+
+/* ============================================================
+   Variants
+   ============================================================ */
+
 .primary {
   color: var(--color-on-primary);
   background: var(--color-primary);
+  box-shadow: var(--shadow-raised);
 }
 
 .primary:hover:not(:disabled) {
   background: var(--color-primary-hover);
+}
+
+.primary:active:not(:disabled) {
+  background: var(--color-primary-active);
+  box-shadow: none;
 }
 
 .secondary {
@@ -36,20 +69,60 @@
 }
 
 .secondary:hover:not(:disabled) {
-  background: var(--color-hover);
+  background: var(--color-surface-hover);
+}
+
+.secondary:active:not(:disabled) {
+  background: var(--color-border);
+}
+
+/* No border and no fill until it is wanted: for a row action or a
+   toolbar, where a box per button would be louder than the data. */
+.quiet {
+  color: var(--color-text-muted);
+  background: none;
+}
+
+.quiet:hover:not(:disabled) {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+}
+
+.quiet:active:not(:disabled) {
+  background: var(--color-border);
 }
 
 .danger {
   color: var(--color-on-primary);
-  background: var(--tone-blocked-text);
+  background: var(--color-danger);
 }
 
 .danger:hover:not(:disabled) {
-  background: var(--color-danger);
+  background: var(--tone-blocked-text);
+}
+
+
+/* ============================================================
+   Loading
+   ============================================================ */
+
+.spinner {
+  animation: spin 800ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 899px) {
   .button {
     min-height: var(--control-height-field);
+    font-size: var(--text-base);
+  }
+
+  .iconOnly {
+    width: var(--control-height-field);
   }
 }

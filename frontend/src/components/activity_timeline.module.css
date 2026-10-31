@@ -1,6 +1,76 @@
-/* Timeline uses borders and spacing to keep record evidence readable. */
-.section { margin-block: var(--space-4); }
-.heading { font-size: var(--text-lg); margin-bottom: var(--space-3); }
-.list { list-style: none; padding: 0; margin: 0; }
-.list li { border-top: 1px solid var(--color-border); padding-block: var(--space-2); }
-.caption { color: var(--color-text-muted); font-size: var(--text-sm); }
+/*
+  Timeline.
+
+  A rail with a marker per entry, so the record's history reads as one
+  sequence rather than a stack of separate notes. Spec.md section 6
+  requires corrections to show as records, not as edits — this is where
+  that is visible.
+*/
+
+.section {
+  margin-block: var(--space-5);
+}
+
+.heading {
+  font-size: var(--text-lg);
+  margin-bottom: var(--space-3);
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.list li {
+  position: relative;
+  padding: 0 0 var(--space-4) var(--space-4);
+  /* The rail. The last entry stops it, so the line does not run on
+     past the end of the history. */
+  border-left: 1px solid var(--color-border);
+}
+
+.list li:last-child {
+  padding-bottom: 0;
+  border-left-color: transparent;
+}
+
+/* The marker sits on the rail, not beside it. */
+.list li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  background: var(--color-surface);
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+}
+
+/* The newest entry is the one being read, so it is the solid marker. */
+.list li:first-child::before {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.list li strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: none;
+}
+
+.caption {
+  margin-top: 2px;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.list li p {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-2h);
+  font-size: var(--text-sm);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  text-wrap: pretty;
+}

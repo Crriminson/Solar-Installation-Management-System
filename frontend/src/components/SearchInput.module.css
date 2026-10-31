@@ -1,22 +1,92 @@
-/* List search box. */
+/*
+  List search box.
 
-.search {
+  The magnifier sits inside the field rather than beside it, so the
+  control reads as one thing and the toolbar stays on one line.
+*/
+
+.wrap {
+  position: relative;
   flex: 1;
   min-width: 0;
   max-width: 420px;
+}
+
+.icon {
+  position: absolute;
+  top: 50%;
+  left: var(--space-2h);
+  color: var(--color-text-faint);
+  transform: translateY(-50%);
+  pointer-events: none;
+  transition: color var(--motion-instant) var(--ease-out);
+}
+
+.wrap:focus-within .icon {
+  color: var(--color-primary);
+}
+
+.search {
+  width: 100%;
   min-height: var(--control-height);
-  padding: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-6);
   font: inherit;
+  font-size: var(--text-sm);
   color: inherit;
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius);
+  transition:
+    border-color var(--motion-instant) var(--ease-out),
+    box-shadow var(--motion-instant) var(--ease-out);
+}
+
+.search::placeholder {
+  color: var(--color-text-faint);
+}
+
+.search:hover {
+  border-color: var(--color-text-muted);
+}
+
+.search:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+/* The shortcut is only worth showing where there is a keyboard. */
+.hint {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  padding: 1px var(--space-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.wrap:focus-within .hint {
+  display: none;
 }
 
 @media (max-width: 899px) {
-  .search {
+  .wrap {
     flex-basis: 100%;
     max-width: none;
+  }
+
+  .search {
     min-height: var(--control-height-field);
+    font-size: var(--text-base);
+  }
+
+  .hint {
+    display: none;
   }
 }

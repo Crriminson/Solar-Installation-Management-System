@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { ICON_SIZE, SearchIcon } from "../design/icons";
 import styles from "./SearchInput.module.css";
 
 /* Wait this long after the last keystroke before asking the server. */
@@ -48,14 +49,20 @@ export default function SearchInput({ label, value, onSearch }: SearchInputProps
   }
 
   return (
-    <input
-      ref={input}
-      className={styles.search}
-      type="search"
-      placeholder={label}
-      aria-label={label}
-      value={typed}
-      onChange={(event) => handleChange(event.target.value)}
-    />
+    <div className={styles.wrap}>
+      <SearchIcon className={styles.icon} size={ICON_SIZE.control} aria-hidden />
+      <input
+        ref={input}
+        className={styles.search}
+        type="search"
+        placeholder={label}
+        aria-label={label}
+        value={typed}
+        onChange={(event) => handleChange(event.target.value)}
+      />
+      <span className={styles.hint} aria-hidden="true">
+        /
+      </span>
+    </div>
   );
 }

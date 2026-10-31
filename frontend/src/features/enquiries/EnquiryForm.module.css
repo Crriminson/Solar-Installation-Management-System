@@ -41,7 +41,7 @@
   content: "●";
   font-size: 0.6rem;
   line-height: 2.4;
-  color: var(--color-sun);
+  color: var(--color-accent-on-ink);
 }
 
 .nextTitle {
@@ -70,7 +70,7 @@
 .steps li::before {
   content: counter(step);
   font-weight: 700;
-  color: var(--color-sun);
+  color: var(--color-accent-on-ink);
 }
 
 /* The form itself. */

@@ -6,21 +6,23 @@
   gap: var(--space-2);
 }
 
+/* The mark keeps the solar colours: it is the product's identity, and
+   does not follow the interface's structural palette. */
 .tile {
-  fill: var(--color-primary);
+  fill: var(--color-mark);
 }
 
 .sun {
-  fill: var(--color-on-primary);
+  fill: var(--color-on-mark);
 }
 
 .rays {
-  stroke: var(--color-on-primary);
+  stroke: var(--color-on-mark);
 }
 
 .name {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  letter-spacing: -0.01em;
+  font-size: var(--text-md);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
   color: var(--color-on-ink);
 }

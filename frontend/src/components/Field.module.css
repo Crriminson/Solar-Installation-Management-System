@@ -1,4 +1,9 @@
-/* Form fields. Controls grow on phones so they can be used on site. */
+/*
+  Form fields. Controls grow on phones so they can be used on site.
+
+  An error is shown at the field and never only at the top of the form,
+  because a long form scrolls the summary out of sight.
+*/
 
 .field {
   display: flex;
@@ -13,7 +18,7 @@
 
 .label {
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
 }
 
 .required::after {
@@ -30,10 +35,34 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border-strong);
   border-radius: var(--radius);
+  transition:
+    border-color var(--motion-instant) var(--ease-out),
+    box-shadow var(--motion-instant) var(--ease-out);
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--color-text-muted);
+}
+
+/* The ring rather than the outline, so the control keeps its shape and
+   the row beside it does not shift. */
+.control:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--focus-ring);
+}
+
+.control:disabled {
+  color: var(--color-text-faint);
+  background: var(--color-surface-sunken);
 }
 
 .control[aria-invalid="true"] {
   border-color: var(--color-danger);
+}
+
+.control[aria-invalid="true"]:focus-visible {
+  box-shadow: var(--focus-ring-danger);
 }
 
 .textarea {
@@ -62,7 +91,11 @@
 }
 
 .error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   color: var(--color-danger);
 }
 

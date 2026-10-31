@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { CloseIcon, ICON_SIZE } from "../design/icons";
 import styles from "./SidePanel.module.css";
 
 interface SidePanelProps {
@@ -51,7 +52,7 @@ export default function SidePanel({ label, onClose, children }: SidePanelProps) 
         aria-label="Close panel"
         onClick={onClose}
       >
-        ×
+        <CloseIcon size={ICON_SIZE.section} aria-hidden />
       </button>
       {children}
     </aside>

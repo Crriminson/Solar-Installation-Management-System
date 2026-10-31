@@ -11,10 +11,26 @@
 }
 
 .dialog::backdrop {
-  background: rgb(28 25 23 / 0.4);
+  background: var(--scrim);
+}
+
+.dialog[open] {
+  animation: lift var(--motion-settle) var(--ease-out);
+}
+
+/* A confirmation must not feel like it slid in from somewhere: it
+   arrives where it is, because it is a question about right here. */
+@keyframes lift {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 
 .title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   margin-bottom: var(--space-2);
   font-size: var(--text-lg);
 }
