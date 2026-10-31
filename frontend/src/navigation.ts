@@ -49,6 +49,21 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     ],
   },
   {
+    title: "Warehouse",
+    items: [
+      {
+        label: "Stock",
+        to: "/stock",
+        roles: ["warehouse", "operations_manager", "finance", "director"],
+      },
+      {
+        label: "Purchasing",
+        to: "/purchasing",
+        roles: ["warehouse", "operations_manager", "finance", "director"],
+      },
+    ],
+  },
+  {
     title: "Catalogue",
     items: [
       {

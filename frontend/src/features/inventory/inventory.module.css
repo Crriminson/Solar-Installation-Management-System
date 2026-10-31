@@ -1,0 +1,49 @@
+/* Purchasing and stock layouts, on the shared operational tokens. */
+
+.toolbar, .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3);
+  margin-block: var(--space-3);
+}
+
+.form { display: grid; gap: var(--space-3); max-width: 760px; }
+.section { margin-bottom: var(--space-5); }
+.section h2 { font-size: var(--text-lg); margin-bottom: var(--space-3); }
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(140px, 220px) minmax(0, 1fr);
+  gap: var(--space-2) var(--space-3);
+}
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* One purchase line being booked in. */
+.receiveLine {
+  border-top: 1px solid var(--color-border);
+  padding-block: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+.receiveLine h3 { font-size: var(--text-base); }
+
+.batchRow {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.error {
+  color: var(--tone-blocked-text);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 700px) {
+  .facts { grid-template-columns: 1fr; gap: var(--space-1); }
+  .facts dd { margin-bottom: var(--space-2); }
+  .batchRow { grid-template-columns: 1fr; }
+  .toolbar > * { width: 100%; }
+}

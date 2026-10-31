@@ -155,7 +155,7 @@ Corroborating official sources for central, Delhi and UP:
 | F05 | Generated quotations | Verified | Backend generation, line-level Decimal/GST rounding, versioned source snapshots, payment terms, issuance/content hash, rejection, expiry and superseding revisions; list/record/generation UI and audit timeline. Concurrent retries and permissions tested. Browser generation, blocked unreviewed package, package review and issuance verified. Acceptance capture is F06; PDFs are F19 |
 | F06 | Acceptance and signatures | Backend implemented | Supervised signing; acceptance frozen to one document hash, witness recorded. Remote Telegram path lands with F16 (D040) |
 | F07 | Orders, payments, invoices | Backend implemented | Order per accepted quotation; deposit billed once, bank reference banked once, invoice never overpaid, all by check constraint. Dispatch gate needs cleared money |
-| F08 | Purchasing and inventory | Not Started | — |
+| F08 | Purchasing and inventory | Backend implemented | Serialized units and batch lots; no stock state changes without a movement. Partial lots split into portions of one drum |
 | F09 | Packing, scanning, dispatch | Not Started | — |
 | F10 | Scheduling and installation | Not Started | — |
 | F11 | Installation evidence | Not Started | — |
