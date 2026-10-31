@@ -26,17 +26,32 @@
 }
 .todo ul { margin: var(--space-2) 0 0; padding-left: var(--space-4); }
 
+/* Ticked repeatedly on site, standing up: a full-width target with
+   room either side, not a line of text with a 13px box on it. */
 .check {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding-block: var(--space-2);
+  gap: var(--space-3);
+  min-height: var(--touch-min);
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-sm);
   text-transform: capitalize;
+  cursor: pointer;
+}
+
+.check:hover {
+  background: var(--color-surface-hover);
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--color-primary);
 }
 
 .scanLabel { font-weight: var(--weight-semibold); }
 .scanInput {
-  height: 52px;
+  height: var(--control-height-scan);
   font-size: var(--text-lg);
   font-family: var(--font-mono);
   padding: 0 var(--space-3);
@@ -61,7 +76,17 @@
   margin: var(--space-3) 0 0;
   padding: 0;
 }
-.photoList img { width: 100%; border-radius: var(--radius); display: block; }
+.photoList img {
+  display: block;
+  width: 100%;
+  /* Reserved before the file loads, so a photo never shifts the form
+     under the finger using it. */
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
 .photoList span { font-size: var(--text-sm); color: var(--color-text-muted); }
 
 .blocked {
@@ -73,6 +98,27 @@
 }
 .error { color: var(--tone-blocked-text); font-size: var(--text-sm); }
 
-@media (max-width: 600px) {
+@media (max-width: 899px) {
   .facts { grid-template-columns: 1fr; }
+}
+
+/* On a phone a step is often taller than the screen, and the action
+   that moves it on must not scroll away from the thumb. It sits above
+   the destination bar, not under it. */
+@media (max-width: 899px) {
+  .stickyActions {
+    position: sticky;
+    bottom: var(--sticky-bottom);
+    z-index: 5;
+    margin-inline: calc(var(--space-3) * -1);
+    margin-bottom: 0;
+    padding: var(--space-3);
+    background: var(--color-background);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .stickyActions > button,
+  .stickyActions > a {
+    flex: 1;
+  }
 }

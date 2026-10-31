@@ -33,6 +33,7 @@ import { closePacking, dispatchOrder, fetchFulfilment, recordDelivery, reserveSt
 import { FULFILMENT_STATUSES } from "./status";
 import type { Fulfilment, PackingLine } from "./types";
 import styles from "./fulfilment.module.css";
+import { BlockedIcon, ConfirmIcon, ICON_SIZE } from "../../design/icons";
 
 export default function PackingScreen() {
   const { fulfilmentId = "" } = useParams();
@@ -174,10 +175,23 @@ function ScanBox({ fulfilment, canOverride, onScanned }: {
       Add to the box
     </Button>
 
-    {mutation.isError &&
-      <p className={styles.scanError}>{describeError(mutation.error)}</p>}
-    {!mutation.isError && lastGood &&
-      <p className={styles.scanOk}>Added {lastGood}</p>}
+    {/* Every scan answers here, announced as well as shown: the person
+        holding the scanner is looking at the box, not the screen. The
+        slot keeps its height so a result never shifts the form. */}
+    <div className={styles.scanResult} role="status" aria-live="polite">
+      {mutation.isError && (
+        <p className={styles.scanError}>
+          <BlockedIcon size={ICON_SIZE.control} aria-hidden />
+          {describeError(mutation.error)}
+        </p>
+      )}
+      {!mutation.isError && lastGood && (
+        <p className={styles.scanOk}>
+          <ConfirmIcon size={ICON_SIZE.control} aria-hidden />
+          Added {lastGood}
+        </p>
+      )}
+    </div>
   </form>;
 }
 

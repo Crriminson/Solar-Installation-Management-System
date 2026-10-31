@@ -16,7 +16,8 @@
 .facts dd { margin: 0; }
 .facts dt, .muted { color: var(--color-text-muted); font-size: var(--text-sm); }
 
-/* The scan box. Big, because it is used standing up with a scanner. */
+/* The scan box. Big, because it is used standing up with a scanner, at
+   arm's length, often wearing gloves. */
 .scanBox {
   display: grid;
   gap: var(--space-3);
@@ -28,7 +29,7 @@
 }
 .scanLabel { font-weight: var(--weight-semibold); }
 .scanInput {
-  height: 56px;
+  height: var(--control-height-scan);
   font-size: var(--text-lg);
   font-family: var(--font-mono);
   padding: 0 var(--space-3);
@@ -37,10 +38,50 @@
   background: var(--color-surface);
   color: var(--color-text);
 }
-.scanOk { color: var(--tone-done-text); background: var(--tone-done-bg); padding: var(--space-2) var(--space-3); border-radius: var(--radius); margin: 0; }
-.scanError { color: var(--tone-blocked-text); background: var(--tone-blocked-bg); padding: var(--space-2) var(--space-3); border-radius: var(--radius); margin: 0; }
+/* The slot keeps its height whether or not it holds a result, so a
+   scan never moves the input out from under the next one. */
+.scanResult {
+  min-height: var(--control-height);
+}
 
-.checkbox { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); }
+.scanOk,
+.scanError {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.scanOk {
+  color: var(--tone-done-text);
+  background: var(--tone-done-bg);
+  border-color: var(--tone-done-border);
+}
+
+.scanError {
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  border-color: var(--tone-blocked-border);
+}
+
+/* The manual fallback is permission-gated and audited, so it is a real
+   decision: it gets a target a gloved thumb can hit, not a 13px line. */
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--touch-min);
+  cursor: pointer;
+}
+
+.checkbox input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
 
 /* One checklist line. Done lines recede so the outstanding ones lead. */
 .line, .lineDone {
@@ -74,7 +115,7 @@
 .blockedText { color: var(--tone-blocked-text); }
 .error { color: var(--tone-blocked-text); font-size: var(--text-sm); }
 
-@media (max-width: 600px) {
+@media (max-width: 899px) {
   .line, .lineDone { grid-template-columns: 1fr; }
   .counts { text-align: left; }
   .facts { grid-template-columns: 1fr; }

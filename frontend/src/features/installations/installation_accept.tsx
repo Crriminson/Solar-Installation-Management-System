@@ -120,7 +120,7 @@ function Handover({ report }: { report: InstallationReport }) {
         {mutation.isError && <p className={styles.error}>{describeError(mutation.error)}</p>}
 
         {refusing
-          ? <div className={styles.actions}>
+          ? <div className={`${styles.actions} ${styles.stickyActions}`}>
               <Button variant="primary"
                 disabled={!named || !refusalReason.trim() || mutation.isPending}
                 onClick={() => mutation.mutate("refused")}>
@@ -128,7 +128,7 @@ function Handover({ report }: { report: InstallationReport }) {
               </Button>
               <Button onClick={() => setRefusing(false)}>Back</Button>
             </div>
-          : <div className={styles.actions}>
+          : <div className={`${styles.actions} ${styles.stickyActions}`}>
               <Button variant="primary" disabled={!named || !signature || mutation.isPending}
                 onClick={() => mutation.mutate("accepted")}>
                 Accept the installation

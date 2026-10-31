@@ -154,7 +154,7 @@ function Form({ report }: { report: InstallationReport }) {
       <SerialSection report={report} onChanged={refresh} />
       <PhotoSection report={report} onChanged={refresh} />
 
-      <div className={styles.actions}>
+      <div className={`${styles.actions} ${styles.stickyActions}`}>
         <Button variant="primary"
           disabled={report.missing_evidence.length > 0 || submitting.isPending}
           onClick={() => submitting.mutate()}>
