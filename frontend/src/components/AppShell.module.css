@@ -1,4 +1,10 @@
-/* App frame. Dark sidebar from 900px up, top and bottom bars below. */
+/*
+  App frame.
+
+  Sidebar and header from 900px up; a top brand bar and a bottom
+  destination bar below that. The sidebar collapses to an icon rail,
+  either by choice or because the window is narrow.
+*/
 
 .shell {
   display: grid;
@@ -6,14 +12,20 @@
   min-height: 100vh;
 }
 
+
+/* ============================================================
+   Sidebar
+   ============================================================ */
+
 .sidebar {
   position: sticky;
   top: 0;
+  z-index: 2;
   align-self: start;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-2);
   color: var(--color-on-ink);
   background: var(--color-ink);
 }
@@ -26,6 +38,8 @@
 .nav {
   flex: 1;
   overflow-y: auto;
+  /* The rail must not show a horizontal bar while labels collapse. */
+  overflow-x: hidden;
 }
 
 .section {
@@ -35,81 +49,279 @@
   margin-bottom: var(--space-3);
 }
 
-/* The one place tracked capitals are used, as small group headings. */
 .sectionTitle {
   margin: 0 0 var(--space-1);
   padding: 0 var(--space-2);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   color: var(--color-on-ink-muted);
 }
 
 .link {
-  padding: 6px var(--space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
   color: var(--color-on-ink);
   text-decoration: none;
-  border-radius: var(--radius);
-  transition: background-color var(--motion-fast);
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--motion-instant) var(--ease-out),
+    color var(--motion-instant) var(--ease-out);
 }
 
 .link:hover {
   background: var(--color-ink-raised);
 }
 
+/* The active item is marked by a bar as well as a fill, so it survives
+   being read on a dim screen outdoors. */
 .linkActive,
 .linkActive:hover {
-  font-weight: 600;
-  color: var(--color-on-primary);
-  background: var(--color-primary);
+  position: relative;
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-ink);
+  background: var(--color-ink-raised);
 }
 
-.account {
+.linkActive::before {
+  content: "";
+  position: absolute;
+  inset: 6px auto 6px -8px;
+  width: 3px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-accent-on-ink);
+}
+
+.linkLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.railToggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  min-height: 36px;
+  margin-top: var(--space-2);
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-muted);
+  text-align: left;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--color-ink-line);
+  border-radius: 0;
+  transition: color var(--motion-instant) var(--ease-out);
+}
+
+.railToggle:hover {
+  color: var(--color-on-ink);
+}
+
+
+/* ============================================================
+   The rail
+
+   Set by choice at any width, and forced between 900 and 1180 where a
+   full sidebar would eat the table beside it.
+   ============================================================ */
+
+.shellRailed {
+  grid-template-columns: var(--sidebar-width-rail) minmax(0, 1fr);
+}
+
+.shellRailed .linkLabel,
+.shellRailed .sectionTitle {
+  /* Hidden from sight and from the reading order together: the icon
+     carries a title attribute in the rail. */
+  display: none;
+}
+
+.shellRailed .link,
+.shellRailed .railToggle {
+  justify-content: center;
+  padding: 0;
+}
+
+.shellRailed .section {
+  margin-bottom: var(--space-2);
+}
+
+@media (min-width: 900px) and (max-width: 1180px) {
+  .shell {
+    grid-template-columns: var(--sidebar-width-rail) minmax(0, 1fr);
+  }
+
+  .linkLabel,
+  .sectionTitle {
+    display: none;
+  }
+
+  .link,
+  .railToggle {
+    justify-content: center;
+    padding: 0;
+  }
+}
+
+
+/* ============================================================
+   Header
+   ============================================================ */
+
+.frame {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--header-height);
+  padding: 0 var(--space-5);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
   gap: var(--space-1);
-  padding: var(--space-3) var(--space-2) 0;
-  border-top: 1px solid var(--color-ink-line);
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-faint);
+}
+
+.crumbLink {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.crumbHere {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.accountButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2h);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--motion-instant) var(--ease-out),
+    border-color var(--motion-instant) var(--ease-out);
+}
+
+.accountButton:hover {
+  color: var(--color-text);
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+.accountButtonName {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* ============================================================
+   Popovers
+
+   The account menu and the phone sheet both use the platform popover,
+   so Escape and clicking away close them with no script of ours.
+   ============================================================ */
+
+.accountMenu {
+  position: fixed;
+  inset: calc(var(--header-height) + var(--space-1)) var(--space-5) auto auto;
+  width: 240px;
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pop);
+}
+
+.accountMenu:popover-open {
+  animation: rise var(--motion-fast) var(--ease-out);
 }
 
 .accountName {
   margin: 0;
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
 }
 
 .accountRole {
-  margin: 0 0 var(--space-2);
+  margin: var(--space-1) 0 var(--space-3);
   font-size: var(--text-sm);
-  color: var(--color-on-ink-muted);
+  color: var(--color-text-muted);
 }
 
-.signOut,
-.signOut:hover:not(:disabled) {
-  color: var(--color-on-ink);
-  background: transparent;
-  border-color: var(--color-ink-line);
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
-.signOut:hover:not(:disabled) {
-  background: var(--color-ink-raised);
-}
+
+/* ============================================================
+   Content
+   ============================================================ */
 
 .content {
   min-width: 0;
-  padding: var(--space-5) var(--space-5);
+  width: 100%;
+  max-width: var(--content-max);
+  padding: var(--space-5);
 }
 
-.phoneTop,
-.phoneBar {
+
+/* ============================================================
+   Phone
+
+   The sidebar is replaced by a bottom bar of the first few
+   destinations. Everything else is in the sheet behind More.
+   ============================================================ */
+
+.phoneBar,
+.sheet {
   display: none;
 }
 
 @media (max-width: 899px) {
-  .shell {
+  .shell,
+  .shellRailed {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
     /* Keeps the last row of a page clear of the bar. */
     padding-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));
   }
@@ -118,12 +330,17 @@
     display: none;
   }
 
-  .phoneTop {
-    display: flex;
-    align-items: center;
-    padding: var(--space-2) var(--space-3);
-    padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
-    background: var(--color-ink);
+  .header {
+    padding: 0 var(--space-3);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .accountButtonName {
+    max-width: 120px;
+  }
+
+  .accountMenu {
+    inset: calc(var(--header-height) + var(--space-1)) var(--space-3) auto auto;
   }
 
   .content {
@@ -143,23 +360,93 @@
   .phoneLink {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 2px;
+    min-width: 0;
     min-height: var(--phone-bar-height);
-    font-size: var(--text-sm);
+    padding: 0 var(--space-1);
+    font: inherit;
+    font-size: var(--text-xs);
     color: var(--color-text-muted);
-    text-decoration: none;
     text-align: center;
+    text-decoration: none;
+    background: none;
+    border: none;
+    transition: color var(--motion-instant) var(--ease-out);
   }
 
   .phoneLinkActive {
-    font-weight: 700;
-    color: var(--color-primary-hover);
+    font-weight: var(--weight-semibold);
+    color: var(--color-primary);
   }
 
-  .phoneSignOut {
-    margin: var(--space-1);
+  /* A sheet, not a dropdown: it comes up from the thumb's end of the
+     screen, which is where the button that opened it is. */
+  .sheet {
+    position: fixed;
+    inset: auto 0 0;
+    display: block;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    margin: 0;
+    padding: var(--space-4) var(--space-3);
+    padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+    background: var(--color-surface);
+    border: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: var(--shadow-float);
+  }
+
+  .sheet:popover-open {
+    animation: slide-up var(--motion-settle) var(--ease-out);
+  }
+
+  .sheetName {
+    margin: 0;
+    font-weight: var(--weight-semibold);
+  }
+
+  .sheetRole {
+    margin: var(--space-1) 0 var(--space-4);
     font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .sheetSection {
+    margin-bottom: var(--space-3);
+  }
+
+  .sheetSection .sectionTitle {
+    color: var(--color-text-muted);
+  }
+
+  .sheetLink {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: var(--touch-min);
     padding: 0 var(--space-2);
+    color: var(--color-text);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+  }
+
+  .sheetLink:hover {
+    background: var(--color-surface-hover);
+  }
+
+  .sheetSignOut {
+    width: 100%;
+    margin-top: var(--space-2);
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(12px);
+      opacity: 0;
+    }
   }
 }

@@ -16,7 +16,13 @@
   overflow: hidden;
   padding: var(--space-5);
   color: var(--color-on-ink);
-  background: var(--color-ink);
+  background:
+    radial-gradient(
+      120% 80% at 10% 0%,
+      var(--color-ink-raised) 0%,
+      transparent 60%
+    ),
+    var(--color-ink);
 }
 
 .panelBody {
@@ -47,6 +53,14 @@
 .content {
   min-width: 0;
   padding: var(--space-6) var(--space-5);
+}
+
+/* The form is capped and centred in its column: at a wide window the
+   gutters grow, the measure does not. */
+.content > * {
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
 }
 
 @media (max-width: 899px) {
