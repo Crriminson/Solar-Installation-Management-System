@@ -80,6 +80,7 @@ OUR_APPS = [
     "apps.quotations",
     "apps.subsidies",
     "apps.orders",
+    "apps.inventory",
 ]
 
 INSTALLED_APPS = [
