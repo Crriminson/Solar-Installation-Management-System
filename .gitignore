@@ -1,0 +1,28 @@
+# Local team rules, shared out of band (decision D030)
+/rules.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Secrets and local config
+.env
+*.env
+!.env.example
+
+# Django
+backend/private_media/
+backend/staticfiles/
+*.sqlite3
+
+# Node
+node_modules/
+frontend/dist/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

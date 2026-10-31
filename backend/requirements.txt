@@ -1,0 +1,6 @@
+# Backend dependencies — see spec.md section 3 for the fixed stack.
+Django==5.2.*
+djangorestframework==3.16.*
+psycopg[binary]==3.2.*
+python-dotenv==1.*
+Pillow==11.*

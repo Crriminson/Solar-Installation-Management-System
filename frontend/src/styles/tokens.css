@@ -1,0 +1,44 @@
+/*
+  Design tokens — the single place to change how the app looks.
+
+  Every colour, size and font in the app comes from one of these
+  variables. Components never write a raw colour or pixel font size.
+*/
+
+:root {
+  /* Brand */
+  --color-primary: #c2410c;          /* solar orange, for primary actions */
+  --color-primary-hover: #9a3412;
+
+  /* Text */
+  --color-text: #1c1917;             /* main body text */
+  --color-text-muted: #78716c;       /* labels, captions, secondary info */
+
+  /* Surfaces */
+  --color-background: #fafaf9;       /* page background */
+  --color-surface: #ffffff;          /* cards, panels, tables */
+  --color-border: #e7e5e4;
+
+  /* Status — used for record states and alerts */
+  --color-success: #15803d;
+  --color-warning: #a16207;
+  --color-danger: #b91c1c;
+
+  /* Spacing scale. Use these, not arbitrary pixel values. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+
+  /* Type scale */
+  --font-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.75rem;
+
+  /* Shape */
+  --radius: 6px;
+}
