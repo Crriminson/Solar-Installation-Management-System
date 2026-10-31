@@ -19,6 +19,7 @@ import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
+import { useToast } from "../../components/ToastContext";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
 import JobCostSection from "../costing/job_cost_section";
@@ -187,14 +188,30 @@ function PaymentActions({ order, payment, onChanged }: {
   const [allocatingTo, setAllocatingTo] = useState("");
   const [amount, setAmount] = useState("");
 
-  const clearing = useMutation({ mutationFn: () => clearPayment(payment), onSuccess: onChanged });
+  /* Money moving is worth confirming out loud. The row already shows
+     the new state; the toast says the request landed. */
+  const confirm = useToast();
+
+  const clearing = useMutation({
+    mutationFn: () => clearPayment(payment),
+    onSuccess: () => { confirm(`Payment of ${formatMoney(payment.amount)} cleared`); onChanged(); },
+  });
   const reversal = useMutation({
     mutationFn: () => reversePayment(payment, reason),
-    onSuccess: () => { setReversing(false); onChanged(); },
+    onSuccess: () => {
+      setReversing(false);
+      confirm(`Payment of ${formatMoney(payment.amount)} reversed`);
+      onChanged();
+    },
   });
   const allocation = useMutation({
     mutationFn: () => allocatePayment(payment, Number(allocatingTo), amount),
-    onSuccess: () => { setAllocatingTo(""); setAmount(""); onChanged(); },
+    onSuccess: () => {
+      setAllocatingTo("");
+      setAmount("");
+      confirm("Allocation recorded");
+      onChanged();
+    },
   });
 
   if (payment.status === "reversed") return null;
