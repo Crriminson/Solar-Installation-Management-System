@@ -72,6 +72,7 @@ Not done:
 | D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
 | D044 | Additional feature correction commits permitted without rewriting pushed history | Confirmed | Owner, 2026-10-31: "ye make them its fine", approving the exception for F01–F03, stated feature/owner credits and publication. Existing history is retained; author and committer match per commit |
 | D042 | Dummy component packages may be authored for development at all required capacities | Confirmed | Owner, 2026-10-31: "you can create dummies or find some samples online". They remain clearly labelled, unreviewed and inactive until explicit administrator review; no claim of electrical compatibility |
+| D043 | Implement the subsidy estimator needed by F05 without treating all of F17 as complete | Confirmed | Dependency implementation inside the owner-authorized work through F05. Paperwork and application tracking stay in F17; no new business scope |
 
 ## 3. Resolved decisions and their consequences
 
@@ -161,7 +162,7 @@ Corroborating official sources for central, Delhi and UP:
 | F14 | Costs and finance | Not Started | Scope set (D025) |
 | F15 | Dashboard and exports | Not Started | — |
 | F16 | Telegram | Not Started | Final phase by D006 |
-| F17 | Subsidies and paperwork | Not Started | Launch set (D026) |
+| F17 | Subsidies and paperwork | In Progress | Only the estimator required by F05: versioned launch-register rules with provenance, eligibility, dated slabs/caps and separate per-kWh incentives. Application tracking and paperwork remain unimplemented |
 | F18 | Audit, search, reliability | Not Started | — |
 | F19 | Generated documents | Not Started | — |
 | F20 | Work queues and notifications | Not Started | — |
