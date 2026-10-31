@@ -14,7 +14,7 @@ forgets to come through this module.
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, ValidationError
 
@@ -188,7 +188,50 @@ def record_payment(order_id, data, actor):
     )
     record_event(payment, "recorded", actor,
                  after={"amount": str(payment.amount), "status": payment.status})
+
+    if payment.status == PaymentStatus.CLEARED:
+        auto_allocate(payment, actor)
     return payment
+
+
+def auto_allocate(payment, actor):
+    """
+    Points a cleared receipt at the oldest unsettled invoice.
+
+    The common case is one advance against one advance invoice, and
+    making somebody press a second button for that teaches them to skip
+    allocation entirely. Finance can still reallocate by hand where a
+    customer has paid against a specific invoice.
+
+    Takes the same caps as a manual allocation, so this can never
+    overpay an invoice or over-allocate a payment.
+    """
+    if payment.kind != PaymentKind.RECEIPT:
+        return
+
+    invoices = (Invoice.objects.select_for_update()
+                .filter(order_id=payment.order_id)
+                .exclude(paid_amount=models.F("amount"))
+                .order_by("id"))
+
+    for invoice in invoices:
+        spare = payment.amount - payment.allocated_amount
+        owing = invoice.amount - invoice.paid_amount
+        amount = min(spare, owing)
+        if amount <= ZERO:
+            continue
+
+        Allocation.objects.create(payment=payment, invoice=invoice, amount=amount)
+        Invoice.objects.filter(pk=invoice.pk).update(
+            paid_amount=invoice.paid_amount + amount)
+        Payment.objects.filter(pk=payment.pk).update(
+            allocated_amount=payment.allocated_amount + amount)
+        payment.refresh_from_db()
+        record_event(payment, "auto_allocated", actor,
+                     after={"invoice": invoice.reference, "amount": str(amount)})
+
+        if payment.allocated_amount >= payment.amount:
+            break
 
 
 @transaction.atomic
@@ -203,6 +246,7 @@ def clear_payment(payment_id, data, actor):
         )
 
     _update_payment(payment, actor, "cleared", status=PaymentStatus.CLEARED)
+    auto_allocate(payment, actor)
     return payment
 
 

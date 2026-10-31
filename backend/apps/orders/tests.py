@@ -180,23 +180,36 @@ class AllocationTests(OrderTestCase):
             content_type=JSON,
         )
 
-    def test_allocating_settles_the_invoice(self):
-        response = self.allocate(self.invoice.amount)
-
-        self.assertEqual(response.status_code, 200, response.content)
+    def test_a_cleared_receipt_settles_its_invoice_with_no_second_step(self):
+        """The common case takes no separate allocation."""
         self.invoice.refresh_from_db()
+        self.payment.refresh_from_db()
+
         self.assertTrue(self.invoice.settled)
+        self.assertEqual(self.payment.allocated_amount, self.payment.amount)
 
     def test_an_invoice_cannot_be_overpaid(self):
-        response = self.allocate(self.invoice.amount + Decimal("1.00"))
+        """A second payment finds nothing owing and cannot be forced onto it."""
+        self.pay(self.order, Decimal("500.00"), reference="UPI-EXTRA")
+        spare = Payment.objects.exclude(pk=self.payment.pk).get()
+
+        response = self.client.post(
+            reverse("payment-allocate", args=[spare.pk]),
+            {"invoice": self.invoice.pk, "amount": "500.00"},
+            content_type=JSON,
+        )
 
         self.assertEqual(response.status_code, 400)
         self.invoice.refresh_from_db()
-        self.assertEqual(self.invoice.paid_amount, Decimal("0.00"))
+        self.assertEqual(self.invoice.paid_amount, self.invoice.amount)
+
+    def test_an_unallocated_payment_stays_unallocated_until_there_is_an_invoice(self):
+        self.pay(self.order, Decimal("500.00"), reference="UPI-ONACCOUNT")
+        spare = Payment.objects.exclude(pk=self.payment.pk).get()
+
+        self.assertEqual(spare.allocated_amount, Decimal("0.00"))
 
     def test_reversing_a_payment_releases_what_it_had_settled(self):
-        self.allocate(self.invoice.amount)
-
         self.payment.refresh_from_db()
         response = self.client.post(
             reverse("payment-reverse", args=[self.payment.pk]),
