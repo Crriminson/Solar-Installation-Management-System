@@ -37,7 +37,7 @@ Four rules follow from that:
 | Density | Giant cards, little data | 40px table rows, comfortable to scan | Spreadsheet walls at 12px |
 | Type | One size for everything | A clear scale, tabular numbers, mono references | Display fonts and tracked capitals |
 | Motion | None, so changes feel abrupt | 120ms on panels and hovers | Page transitions and loading shimmer |
-| Personality | Nothing to remember | Status paths, four job tracks, "Waiting on" lines | Mascots and illustrations |
+| Personality | Nothing to remember | Dark brand panel, sun mark, status paths, four job tracks, "Waiting on" lines | Mascots and illustrations |
 
 ## 2. What we learned from others
 
@@ -89,8 +89,9 @@ in `spec.md`.
 └───────────────┴──────────────────────────────────────────────┘
 ```
 
-- **Sidebar, 232px.** Frappe's Desk moved navigation here to free up space, and
-  it suits a growing number of sections. It collapses below 1024px.
+- **Dark sidebar, 232px.** It gives the app its frame and brand, and keeps the
+  working area bright. Frappe's Desk moved navigation here to free up space, and
+  it suits a growing number of sections. Below 900px a bottom bar replaces it.
 - **Only what the role can use.** A section appears only if one of the user's
   roles allows it. The backend still enforces this.
 - **Grouped in workflow order, not alphabetically.** Sales, Operations,
@@ -100,7 +101,7 @@ in `spec.md`.
 
 ### Phone
 
-Technicians and warehouse staff get a bottom bar with up to four items. It is
+Phones get a bottom bar with up to four items, for every role. It is
 easy to reach with one hand.
 
 ```
@@ -112,7 +113,7 @@ easy to reach with one hand.
 └──────────────────────┘
 ```
 
-Other roles get the same app with the sidebar behind a menu button.
+When a role has more than four sections, the extra ones move behind a More item.
 
 ### Staff with several roles
 
@@ -269,7 +270,11 @@ For the Director (F15). See section 9.
 
 ### Public form
 
-The one screen customers use directly. It should feel calm and trustworthy,
+The one screen customers use directly, and the first impression of the company.
+A dark brand panel says who this is, what is offered and what happens next, using
+only true facts: no invented customer counts or savings. The form sits beside it
+on a card. On a phone the panel shrinks so the form starts on the first screen.
+The login screen uses the same panel. It should feel calm and trustworthy,
 with no staff styling, and show the reference clearly on success.
 
 ## 5. Which page each feature uses
@@ -318,7 +323,10 @@ or font-size values.
 ### Colour
 
 - The base is warm neutral. White surfaces sit on a very light background.
-- **Solar orange is for action only:** primary buttons, links, focus rings.
+- **Ink** is the dark brand surface: the sidebar and the brand panel, with a
+  solar array pattern and the sun mark as the app's identity.
+- **Solar orange is for action only:** primary buttons, links, focus rings, and
+  the current place in the app.
 - One primary button per view area.
 - Status colours appear only on status.
 - No dark mode for now. Field use needs strong light-mode contrast first.
@@ -510,7 +518,7 @@ is cleared. This cannot be undone." The confirm button repeats the action:
 - Every interactive element has a visible focus ring and works by keyboard.
 - Every input has a label. Errors use `aria-invalid` and `aria-describedby`.
 - Status updates announce through a polite live region.
-- Tables wrap in their own scroll container on small screens. The page itself
+- Table rows become labelled stacked cards on phones. The page itself
   never scrolls sideways.
 - Dialogs and panels trap focus and return it on close.
 - Test with zoom at 200%, and check phone screens outdoors in real sunlight.
@@ -540,21 +548,22 @@ no UI library. This matches the CSS Modules baseline in `spec.md`.
 | Build order | Component | Purpose |
 |---|---|---|
 | 1 | `AppShell` | Sidebar, phone bar, role-based sections |
+| 1 | `BrandMark`, `BrandShell` | The sun mark, and the brand panel page layout |
 | 1 | `PageHeader` | Title, status, primary action |
 | 1 | `StatusBadge` | Shape, tone and label, from one status map |
 | 1 | `Field` | Label, hint, error. Move it out of `EnquiryForm.tsx` |
-| 2 | `DataTable` | Columns, row click, sort, scroll container |
+| 2 | `DataTable` | Columns, row click, stacked cards on phones |
 | 2 | `FilterTabs` | Saved views, stored in the URL |
 | 2 | `Pagination` | `1–25 of 130`, Previous, Next |
 | 2 | `StateMessage` | Loading, empty, error, permission denied |
-| 3 | `Money`, `Reference`, `DateTime`, `Quantity` | One way to show each value |
+| 3 | `Reference`, and `lib/format.ts` for money, dates and quantities | One way to show each value |
 | 3 | `StatusPath` | Stages, current stage, short guidance |
 | 3 | `ActivityTimeline` | State changes, notes, corrections |
 | 3 | `ConfirmDialog` | States the result of an action |
 | 3 | `SidePanel` | Width, focus, Escape, URL state |
 | 4 | `Cue` | Live count that opens a filtered list |
-| 4 | `CommandSearch` | Ctrl+K |
-| 4 | `Icon` | A small local SVG set, with no icon package |
+| With F18 | `CommandSearch` | Ctrl+K. Needs the global search API |
+| Later | `Icon` | A small local SVG set, once a screen needs one. Status uses shapes |
 | Later | `ScanInput`, `StepForm`, `SignaturePad`, `JobTracks`, `ScheduleBoard` | Built with their features |
 
 ## 15. First steps in the existing screens

@@ -2,6 +2,10 @@
 //
 // Development proxies /api to the Django server so the browser sees one
 // origin, matching the deployment layout described in spec.md section 3.
+//
+// changeOrigin stays off. Django's CSRF check compares the browser's
+// Origin with the Host header, so rewriting Host refuses every signed-in
+// write as a cross-site request.
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
@@ -14,8 +18,8 @@ export default defineConfig({
   server: {
     port: DEV_PORT,
     proxy: {
-      "/api": { target: API_TARGET, changeOrigin: true },
-      "/admin": { target: API_TARGET, changeOrigin: true },
+      "/api": { target: API_TARGET },
+      "/admin": { target: API_TARGET },
     },
   },
 });

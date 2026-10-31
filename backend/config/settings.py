@@ -35,6 +35,14 @@ MAX_PAGE_SIZE = 100                                          # hard ceiling
 # Raise it in .env for demos: every local submission shares one IP.
 PUBLIC_ENQUIRY_RATE = os.getenv("PUBLIC_ENQUIRY_RATE", "20/hour")
 
+# How often one client may try to sign in.
+LOGIN_RATE = os.getenv("LOGIN_RATE", "10/minute")
+
+# Proxies in front of Django. Rate limits only trust this many entries
+# in X-Forwarded-For; without it a client can forge the header and get a
+# fresh limit on every request. Zero means use the connection's address.
+TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "0"))
+
 
 # ============================================================
 # 2. Environment — differs per machine, comes from .env
@@ -97,7 +105,11 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": DEFAULT_PAGE_SIZE,
-    "DEFAULT_THROTTLE_RATES": {"public_enquiry": PUBLIC_ENQUIRY_RATE},
+    "DEFAULT_THROTTLE_RATES": {
+        "public_enquiry": PUBLIC_ENQUIRY_RATE,
+        "login": LOGIN_RATE,
+    },
+    "NUM_PROXIES": TRUSTED_PROXY_COUNT,
 }
 
 

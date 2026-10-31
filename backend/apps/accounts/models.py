@@ -65,7 +65,8 @@ class User(AbstractUser):
     def has_role(self, role):
         """True when this user holds the given role, or is an administrator."""
         return (
-            Role.ADMINISTRATOR in self.roles
+            self.is_superuser
+            or Role.ADMINISTRATOR in self.roles
             or role in self.roles
         )
 

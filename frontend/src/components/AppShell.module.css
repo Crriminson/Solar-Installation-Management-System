@@ -1,0 +1,165 @@
+/* App frame. Dark sidebar from 900px up, top and bottom bars below. */
+
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: var(--space-3);
+  color: var(--color-on-ink);
+  background: var(--color-ink);
+}
+
+.brand {
+  margin: var(--space-1) 0 var(--space-4);
+  padding: 0 var(--space-2);
+}
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+}
+
+/* The one place tracked capitals are used, as small group headings. */
+.sectionTitle {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-on-ink-muted);
+}
+
+.link {
+  padding: 6px var(--space-2);
+  color: var(--color-on-ink);
+  text-decoration: none;
+  border-radius: var(--radius);
+  transition: background-color var(--motion-fast);
+}
+
+.link:hover {
+  background: var(--color-ink-raised);
+}
+
+.linkActive,
+.linkActive:hover {
+  font-weight: 600;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-2) 0;
+  border-top: 1px solid var(--color-ink-line);
+}
+
+.accountName {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.accountRole {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-on-ink-muted);
+}
+
+.signOut,
+.signOut:hover:not(:disabled) {
+  color: var(--color-on-ink);
+  background: transparent;
+  border-color: var(--color-ink-line);
+}
+
+.signOut:hover:not(:disabled) {
+  background: var(--color-ink-raised);
+}
+
+.content {
+  min-width: 0;
+  padding: var(--space-5) var(--space-5);
+}
+
+.phoneTop,
+.phoneBar {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    /* Keeps the last row of a page clear of the bar. */
+    padding-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .phoneTop {
+    display: flex;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    padding-top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+    background: var(--color-ink);
+  }
+
+  .content {
+    padding: var(--space-3);
+  }
+
+  .phoneBar {
+    position: fixed;
+    inset: auto 0 0;
+    z-index: 10;
+    display: flex;
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .phoneLink {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--phone-bar-height);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    text-align: center;
+  }
+
+  .phoneLinkActive {
+    font-weight: 700;
+    color: var(--color-primary-hover);
+  }
+
+  .phoneSignOut {
+    margin: var(--space-1);
+    font-size: var(--text-sm);
+    padding: 0 var(--space-2);
+  }
+}

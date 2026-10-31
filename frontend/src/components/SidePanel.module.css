@@ -1,0 +1,51 @@
+/* Side panel. Floats over the list, and fills the screen on a phone. */
+
+.panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  z-index: 20;
+  width: var(--panel-width);
+  max-width: 100%;
+  padding: var(--space-4);
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  box-shadow: var(--shadow-float);
+}
+
+.panel:focus {
+  outline: none;
+}
+
+.close {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: var(--control-height);
+  height: var(--control-height);
+  font: inherit;
+  font-size: var(--text-xl);
+  line-height: 1;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--color-hover);
+}
+
+@media (max-width: 899px) {
+  .panel {
+    width: 100%;
+    padding: var(--space-3);
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  }
+
+  .close {
+    width: var(--control-height-field);
+    height: var(--control-height-field);
+  }
+}

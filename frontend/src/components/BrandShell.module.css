@@ -1,0 +1,75 @@
+/* A brand panel beside a page. Stacks above it on a phone. */
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(340px, 38%) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.panel {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  padding: var(--space-5);
+  color: var(--color-on-ink);
+  background: var(--color-ink);
+}
+
+.panelBody {
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-6);
+}
+
+.array {
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  height: 34%;
+  /* Fades upward, so text above stays on a calm surface. */
+  mask-image: linear-gradient(to top, var(--color-ink), transparent);
+}
+
+.cell {
+  fill: var(--color-ink-raised);
+  stroke: var(--color-ink-line);
+}
+
+.grid {
+  stroke: var(--color-ink-line);
+  fill: none;
+}
+
+.content {
+  min-width: 0;
+  padding: var(--space-6) var(--space-5);
+}
+
+@media (max-width: 899px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .panel {
+    position: relative;
+    height: auto;
+    padding: var(--space-3);
+  }
+
+  .panelBody {
+    margin-top: var(--space-4);
+    padding-bottom: var(--space-2);
+  }
+
+  .array {
+    display: none;
+  }
+
+  .content {
+    padding: var(--space-3);
+  }
+}

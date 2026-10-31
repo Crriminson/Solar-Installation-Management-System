@@ -1,0 +1,22 @@
+/* List search box. */
+
+.search {
+  flex: 1;
+  min-width: 0;
+  max-width: 420px;
+  min-height: var(--control-height);
+  padding: var(--space-2);
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 899px) {
+  .search {
+    flex-basis: 100%;
+    max-width: none;
+    min-height: var(--control-height-field);
+  }
+}

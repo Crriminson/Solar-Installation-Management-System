@@ -3,7 +3,7 @@
 Last updated: 2026-10-31
 Specification version: 1.0
 Baseline status: LOCKED 2026-10-31
-Implementation status: NOT STARTED
+Implementation status: IN PROGRESS. F01 to F03 built; see section 5
 
 ## 1. Current state
 
@@ -19,9 +19,9 @@ Done:
 - All five open decisions resolved (D024-D028).
 
 Not done:
-- No dependency has been installed or compatibility-tested.
-- No application, database, migration or infrastructure exists.
-- No test, automated or performance, has run.
+- F04 to F20.
+- Role permissions beyond survey review. Other endpoints only require a login.
+- Performance targets in spec.md section 12 have not been measured.
 - Six states lack an exact slab and fall back to central-only until
   figures are supplied (section 4).
 
@@ -37,7 +37,7 @@ Not done:
 | D006 | Telegram in scope, implemented last | Confirmed | Owner choice |
 | D007 | WhatsApp excluded | Confirmed | Owner choice |
 | D008 | No customer dashboard | Confirmed | Owner choice |
-| D009 | PostgreSQL 17 as primary database | Confirmed | Relational integrity, transactions, cross-entity reporting |
+| D009 | PostgreSQL 17 as primary database | Superseded by D029 | Relational integrity, transactions, cross-entity reporting |
 | D010 | Django 5.2 with the Django ORM, no second ORM | Confirmed | Integrated framework; avoids redundant abstraction |
 | D011 | React 19 and TypeScript frontend | Confirmed | Interactive operational screens |
 | D012 | Standalone application, not an Odoo add-on | Confirmed | Open competition; full control of the data model |
@@ -62,6 +62,9 @@ Not done:
 | D031 | Git repo in the project folder, pushed to GitHub | Confirmed | Owner decision 2026-10-31. Supersedes the earlier deferral. Remote: Crriminson/Solar-Installation-Management-System |
 | D032 | Local development setup; no Docker for dev | Confirmed | Owner decision 2026-10-31. Each builder installs PostgreSQL 16 and runs their own database per README. Docker Compose stays in spec.md section 3 as the deployment target only, written if and when we deploy |
 | D033 | Node 24 in use against a spec floor of Node 22.12 | Confirmed | Machine has v24.12.0, which clears the stated minimum. No spec change |
+| D034 | design.md added as a fourth project document | Confirmed | UI is the builders' call under spec.md section 2. Extends D004 |
+| D035 | Staff sign in through the app, with session, login and logout endpoints | Confirmed | Sessions are the spec.md section 3 baseline. Staff previously signed in through Django admin |
+| D036 | A Django superuser holds every role | Confirmed | The first account on a new install must be able to use the app |
 
 ## 3. Resolved decisions and their consequences
 
@@ -174,4 +177,4 @@ behaviour, affected requirement IDs, and the date.
 | Owner instruction | Baseline the scope as written; it may not be modified without explicit instruction |
 | Open decisions at lock | None. O01-O05 resolved as D024-D028 |
 | Data work carried past lock | Exact slabs for 6 incomplete schemes (section 4); reference bills of materials for review (D028) |
-| Implementation authorization | Pending — not yet requested |
+| Implementation authorization | Given. Feature work under way |

@@ -74,6 +74,10 @@ npm run dev
 App on http://localhost:5173. Vite proxies `/api` and `/admin` to the
 Django server, so run both.
 
+The public form is at `/`. Staff sign in at `/login` with the account
+from `createsuperuser`. Give other staff their roles in `/admin`, as a
+list such as `["sales"]`.
+
 ## Daily use
 
 | Task | Command |
@@ -82,7 +86,7 @@ Django server, so run both.
 | Run frontend | `cd frontend && npm run dev` |
 | New migration | `manage.py makemigrations <app>` then `manage.py migrate` |
 | Backend tests | `manage.py test` |
-| Typecheck | `cd frontend && npx tsc --noEmit` |
+| Typecheck | `cd frontend && npm run typecheck` |
 | Production build | `cd frontend && npm run build` |
 
 After pulling, re-run `pip install -r requirements.txt`, `npm install`

@@ -1,0 +1,18 @@
+/* Loading, empty and error states. */
+
+.message {
+  padding: var(--space-6) var(--space-3);
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.text {
+  margin: 0 0 var(--space-3);
+}
+
+.alert {
+  padding: var(--space-3);
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  border-radius: var(--radius);
+}

@@ -36,3 +36,13 @@ h1, h2, h3 {
   margin: 0 0 var(--space-3);
   line-height: 1.2;
 }
+
+a {
+  color: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

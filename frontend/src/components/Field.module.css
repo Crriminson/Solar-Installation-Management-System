@@ -1,0 +1,74 @@
+/* Form fields. Controls grow on phones so they can be used on site. */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.required::after {
+  content: " *";
+  color: var(--color-danger);
+}
+
+.control {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-2);
+  font: inherit;
+  color: inherit;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius);
+}
+
+.control[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.file {
+  font: inherit;
+  max-width: 100%;
+}
+
+.withUnit {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.unit {
+  color: var(--color-text-muted);
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+@media (max-width: 899px) {
+  .control {
+    min-height: var(--control-height-field);
+    font-size: var(--text-base);   /* below this, iOS zooms on focus */
+  }
+}

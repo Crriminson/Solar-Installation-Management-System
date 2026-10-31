@@ -1,0 +1,125 @@
+/* Data table. Rows are 40px when a cell holds one line of text. */
+
+.scroll {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Read by screen readers, and hidden visually. */
+.caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Table heads are body text, a step smaller - not tracked capitals. */
+.table th {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  background: var(--color-hover);
+}
+
+.table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.clickable {
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.clickable:hover {
+  background: var(--color-hover);
+}
+
+.clickable:focus-visible {
+  outline-offset: -2px;
+}
+
+.selected,
+.selected:hover {
+  background: var(--color-primary-soft);
+}
+
+/* On a phone: one stacked card per row, labelled from the column. */
+@media (max-width: 899px) {
+  .scroll {
+    overflow-x: visible;
+    background: none;
+    border: none;
+  }
+
+  .table,
+  .table tbody {
+    display: block;
+  }
+
+  .table thead {
+    display: none;
+  }
+
+  .table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .table tbody tr {
+    display: block;
+    padding: var(--space-2) var(--space-3);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .table td {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+    border-bottom: none;
+    overflow-wrap: anywhere;
+  }
+
+  .table td::before {
+    content: attr(data-label);
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+  }
+
+  .table td > * {
+    grid-column: 2;
+  }
+
+  .table .numeric {
+    text-align: left;
+  }
+
+  .selected {
+    background: var(--color-primary-soft);
+  }
+}
