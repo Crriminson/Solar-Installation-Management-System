@@ -91,6 +91,16 @@ export const NAV_SECTIONS: readonly NavSection[] = [
     ],
   },
   {
+    title: "Finance",
+    items: [
+      {
+        label: "Technician pay",
+        to: "/technician-pay",
+        roles: ["finance", "operations_manager", "director"],
+      },
+    ],
+  },
+  {
     title: "Catalogue",
     items: [
       {

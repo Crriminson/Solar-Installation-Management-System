@@ -22,6 +22,7 @@ import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { businessToday, formatDate, formatMoney, formatQuantity } from "../../lib/format";
+import SupplierPayments from "../costing/supplier_payments";
 import { cancelPurchaseOrder, fetchPurchaseOrder, placePurchaseOrder, receiveGoods,
          type ReceiptLine } from "./api";
 import { PURCHASE_STATUSES } from "./status";
@@ -100,6 +101,9 @@ function PurchaseDetails({ purchase }: { purchase: PurchaseOrder }) {
         <dd>{purchase.expected_on ? formatDate(purchase.expected_on) : "No date given"}</dd>
       </dl>
     </section>
+
+    <SupplierPayments purchaseId={purchase.id}
+      hasInvoice={Boolean(purchase.supplier_invoice_amount)} />
 
     <section className={styles.section}>
       <h2>Lines</h2>

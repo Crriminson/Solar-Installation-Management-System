@@ -42,6 +42,7 @@ import WarrantyRecord from "./features/warranties/warranty_record";
 import TicketList from "./features/support/ticket_list";
 import TicketNew from "./features/support/ticket_new";
 import TicketRecord from "./features/support/ticket_record";
+import TechnicianPay from "./features/costing/technician_pay";
 
 export default function App() {
   return (
@@ -75,6 +76,7 @@ export default function App() {
         <Route path="/tickets" element={<TicketList />} />
         <Route path="/tickets/new" element={<TicketNew />} />
         <Route path="/tickets/:ticketId" element={<TicketRecord />} />
+        <Route path="/technician-pay" element={<TechnicianPay />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />

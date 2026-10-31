@@ -21,6 +21,7 @@ import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
+import JobCostSection from "../costing/job_cost_section";
 import OrderWarrantiesSection from "../warranties/order_warranties";
 import { allocatePayment, cancelOrder, clearPayment, fetchOrder, issueBalanceInvoice,
          recordPayment, reversePayment } from "./api";
@@ -118,6 +119,8 @@ function OrderDetails({ order }: { order: Order }) {
     <PaymentSection order={order} canTakeMoney={canTakeMoney} onChanged={refresh} />
 
     {delivered && <OrderWarrantiesSection orderId={order.id} />}
+
+    {user.can_view_costs && <JobCostSection orderId={order.id} />}
 
     {open && <div className={styles.actions}>
       <Button onClick={() => setCancelling(true)}>Cancel order</Button>

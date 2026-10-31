@@ -20,6 +20,7 @@ import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { dateTimeForInput, dateTimeInputToIso, formatDateTime } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
+import TimeSection from "../costing/time_section";
 import { openReport } from "../installations/api";
 import { cancelJob, fetchJob, rescheduleJob, startJob } from "./api";
 import { JOB_KINDS, JOB_STATUSES } from "./status";
@@ -114,6 +115,8 @@ function JobDetails({ job }: { job: Job }) {
 
     {(starting.isError || report.isError) &&
       <p className={styles.error}>{describeError(starting.error ?? report.error)}</p>}
+
+    <TimeSection jobId={job.id} crew={job.assignments.map((row) => row.technician)} />
 
     {job.schedule_changes && job.schedule_changes.length > 0 &&
       <section className={styles.section}>
