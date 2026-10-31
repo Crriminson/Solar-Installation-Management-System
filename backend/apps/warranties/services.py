@@ -93,9 +93,10 @@ def record_replacement(warranty_id, replacement_unit_id, data, actor):
     """
     Moves cover from a failed unit onto the one that replaced it.
 
-    Expects complaint_at, replaced_at and reason in data. The original
-    row is left exactly as it was: the new row points back at it, so both
-    serials stay linked and the failed unit's history is intact.
+    Expects complaint_at, replaced_at and reason in data, plus reviewed
+    when an authorized review has accepted the claim. The original row is
+    left exactly as it was: the new row points back at it, so both serials
+    stay linked and the failed unit's history is intact.
 
     Terms come from the original's snapshot, not the live policy, so a
     policy change since delivery cannot alter what the customer receives.
@@ -154,7 +155,8 @@ def _check_replacement(original, unit, data, reason):
         raise ValidationError(
             {"complaint_at": ["The complaint cannot come after the replacement."]}
         )
-    if not original.covers(business_date(complaint_at)):
+    # An authorized review has already weighed this claim (spec.md F13).
+    if not data.get("reviewed") and not original.covers(business_date(complaint_at)):
         raise ValidationError(
             {"complaint_at": ["The complaint falls outside cover. Send it to review."]}
         )

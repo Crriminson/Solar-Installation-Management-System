@@ -67,7 +67,7 @@ class InvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Invoice
         fields = ["id", "reference", "kind", "amount", "paid_amount", "outstanding",
-                  "settled", "issued_at"]
+                  "settled", "issued_at", "ticket"]
 
     def get_outstanding(self, invoice):
         return invoice.amount - invoice.paid_amount

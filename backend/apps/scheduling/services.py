@@ -50,6 +50,7 @@ def create_job(data, actor):
         site=site,
         order=order,
         survey_id=data.get("survey"),
+        ticket_id=data.get("ticket"),
         starts_at=data["starts_at"],
         ends_at=data["ends_at"],
         notes=data.get("notes", "").strip(),
@@ -216,6 +217,24 @@ def move_job(job, status, actor, *, reason=""):
     """Used by F11 when evidence is submitted and when the customer signs."""
     _require_move(job, status)
     _update(job, actor, status, reason=reason, status=status)
+
+
+def begin_visit(job, actor):
+    """Used by F13: recording a diagnosis means the technician is there."""
+    if job.status == JobStatus.SCHEDULED:
+        _update(job, actor, "started", status=JobStatus.IN_PROGRESS,
+                blocked_reason="", blocked_owner=None)
+
+
+def finish_visit(job, actor):
+    """
+    Ends a service visit, which has no acceptance step of its own.
+
+    The customer's say on a repair is the ticket's confirmation (F13), so
+    this skips Awaiting Customer Acceptance, and only for a service visit.
+    """
+    if job.kind == JobKind.SERVICE and job.status == JobStatus.IN_PROGRESS:
+        _update(job, actor, "completed", status=JobStatus.COMPLETED)
 
 
 # ============================================================

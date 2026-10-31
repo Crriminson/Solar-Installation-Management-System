@@ -47,6 +47,13 @@ class InvoiceKind(models.TextChoices):
     BALANCE = "balance", "Balance"
     FULL = "full", "Full amount"
     ZERO_CHARGE = "zero_charge", "Zero charge (warranty work)"
+    REPAIR = "repair", "Repair"
+
+
+# An order is billed once for each stage, but can need any number of
+# repairs across twenty years. Kept apart so "what the system cost" and
+# "what later repairs cost" are never added together by accident.
+SERVICE_INVOICE_KINDS = [InvoiceKind.ZERO_CHARGE, InvoiceKind.REPAIR]
 
 
 class PaymentKind(models.TextChoices):
@@ -163,8 +170,20 @@ class Order(models.Model):
             total=models.Sum("amount"))["total"] or ZERO
         return received - refunded
 
+    def repair_billed(self):
+        """Repairs invoiced after the sale. Tax-inclusive, like the gross."""
+        return self.invoices.filter(kind=InvoiceKind.REPAIR).aggregate(
+            total=models.Sum("amount"))["total"] or ZERO
+
     def outstanding(self):
-        return self.gross_payable - self.cleared_total()
+        """
+        Everything owed, less everything cleared.
+
+        Repairs are added because a repair receipt lands in the same
+        ledger. Left out, paying for a repair would look like paying off
+        the installation balance.
+        """
+        return self.gross_payable + self.repair_billed() - self.cleared_total()
 
     @property
     def advance_cleared(self):
@@ -200,6 +219,12 @@ class Invoice(models.Model):
         max_digits=14, decimal_places=2, validators=[MinValueValidator(ZERO)]
     )
     paid_amount = models.DecimalField(max_digits=14, decimal_places=2, default=ZERO)
+
+    # The ticket a repair or zero-charge invoice came from (F13).
+    ticket = models.ForeignKey(
+        "support.ServiceTicket", on_delete=models.PROTECT,
+        null=True, blank=True, related_name="invoices",
+    )
     issued_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="invoices_issued"
     )
@@ -213,7 +238,7 @@ class Invoice(models.Model):
             # invoice would quietly double what the customer is asked for.
             models.UniqueConstraint(
                 fields=["order", "kind"],
-                condition=~models.Q(kind="zero_charge"),
+                condition=~models.Q(kind__in=["zero_charge", "repair"]),
                 name="one_invoice_per_order_and_kind",
             ),
             models.CheckConstraint(

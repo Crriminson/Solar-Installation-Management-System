@@ -73,6 +73,12 @@ class Job(models.Model):
         related_name="jobs",
     )
 
+    # A service visit belongs to its ticket. A ticket may need several.
+    ticket = models.ForeignKey(
+        "support.ServiceTicket", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="jobs",
+    )
+
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
     notes = models.TextField(blank=True)

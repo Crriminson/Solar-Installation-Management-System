@@ -22,8 +22,8 @@ from apps.core.api import business_date, check_revision
 from apps.core.models import record_event
 from apps.quotations.models import QuoteRevision, QuoteStatus
 
-from .models import (Allocation, Invoice, InvoiceKind, Order, OrderStatus, Payment,
-                     PaymentKind, PaymentPlan, PaymentStatus, ZERO)
+from .models import (SERVICE_INVOICE_KINDS, Allocation, Invoice, InvoiceKind, Order, OrderStatus,
+                     Payment, PaymentKind, PaymentPlan, PaymentStatus, ZERO)
 
 
 # ============================================================
@@ -104,23 +104,29 @@ def cancel_order(order_id, data, actor):
 # Invoices
 # ============================================================
 
-def issue_invoice(order, kind, amount, actor):
+def issue_invoice(order, kind, amount, actor, *, ticket=None):
     """
     Raises one invoice against the order.
 
     The unique constraint on (order, kind) is what stops a deposit being
     billed twice; this check only turns that into a readable message.
+    Repairs are exempt, since one order can need many, and only warranty
+    work may be invoiced at zero (spec.md F19).
     """
-    if amount <= ZERO:
+    if kind == InvoiceKind.ZERO_CHARGE:
+        if amount != ZERO:
+            raise ValidationError({"amount": ["A zero-charge invoice charges nothing."]})
+    elif amount <= ZERO:
         raise ValidationError({"amount": ["An invoice must be for more than nothing."]})
 
-    if Invoice.objects.filter(order=order, kind=kind).exists():
+    if kind not in SERVICE_INVOICE_KINDS and Invoice.objects.filter(order=order, kind=kind).exists():
         raise ValidationError(
             {"kind": [f"This order already has a {kind} invoice."]}
         )
 
     invoice = Invoice.objects.create(
-        order=order, kind=kind, amount=amount, issued_by=actor, issued_at=timezone.now()
+        order=order, kind=kind, amount=amount, ticket=ticket,
+        issued_by=actor, issued_at=timezone.now()
     )
     record_event(invoice, "issued", actor,
                  after={"reference": invoice.reference, "amount": str(amount)})
