@@ -1,0 +1,401 @@
+"""
+F03 — site survey and approval.
+
+A technician visits the roof and records the physical facts a quotation
+depends on. Nothing may be quoted to a customer until an approver has
+signed that survey off.
+
+Two records, because a survey can be sent back and redone:
+
+    Survey          — one per enquiry. The ongoing conversation.
+    SurveyRevision  — one attempt at recording the site. Immutable
+                      once submitted.
+    SurveyPhoto     — evidence attached to a revision.
+
+The revision is where the rule lives: an approved revision is frozen
+for good, because a quotation is built from it and must stay
+reproducible. Changing anything afterwards means a new revision and a
+fresh approval.
+"""
+
+from decimal import Decimal, InvalidOperation
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models, transaction
+from django.utils import timezone
+
+from apps.customers.models import Enquiry, SystemType
+
+
+# ============================================================
+# Choices
+# ============================================================
+
+class RevisionStatus(models.TextChoices):
+    DRAFT = "draft", "Draft"
+    SUBMITTED = "submitted", "Submitted"
+    CHANGES_REQUESTED = "changes_requested", "Changes requested"
+    APPROVED = "approved", "Approved"
+    REJECTED = "rejected", "Rejected"
+
+
+# Which statuses may follow which. A revision cannot be approved
+# straight from draft: somebody has to submit it for review first.
+ALLOWED_REVISION_CHANGES = {
+    RevisionStatus.DRAFT: [RevisionStatus.SUBMITTED],
+    RevisionStatus.SUBMITTED: [
+        RevisionStatus.APPROVED,
+        RevisionStatus.CHANGES_REQUESTED,
+        RevisionStatus.REJECTED,
+    ],
+    # Changes requested is terminal for this revision. The technician
+    # makes a new one rather than editing a reviewed record.
+    RevisionStatus.CHANGES_REQUESTED: [],
+    RevisionStatus.APPROVED: [],
+    RevisionStatus.REJECTED: [],
+}
+
+# A revision nobody can edit any more.
+LOCKED_STATUSES = [
+    RevisionStatus.SUBMITTED,
+    RevisionStatus.CHANGES_REQUESTED,
+    RevisionStatus.APPROVED,
+    RevisionStatus.REJECTED,
+]
+
+
+class RoofType(models.TextChoices):
+    FLAT_RCC = "flat_rcc", "Flat RCC"
+    SLOPED_TILE = "sloped_tile", "Sloped tile"
+    METAL_SHEET = "metal_sheet", "Metal sheet"
+    OTHER = "other", "Other"
+
+
+class Orientation(models.TextChoices):
+    """Which way the roof face points. South is best in India."""
+
+    NORTH = "N", "North"
+    NORTH_EAST = "NE", "North-east"
+    EAST = "E", "East"
+    SOUTH_EAST = "SE", "South-east"
+    SOUTH = "S", "South"
+    SOUTH_WEST = "SW", "South-west"
+    WEST = "W", "West"
+    NORTH_WEST = "NW", "North-west"
+
+
+# ============================================================
+# Survey
+# ============================================================
+
+class Survey(models.Model):
+    """
+    The survey for one enquiry, across however many attempts it takes.
+
+    Holds no measurements itself. Everything measured lives on a
+    revision, so history is never overwritten.
+    """
+
+    enquiry = models.OneToOneField(
+        Enquiry, on_delete=models.PROTECT, related_name="survey"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-id"]
+
+    def __str__(self):
+        return f"Survey for {self.enquiry.reference}"
+
+    @property
+    def latest_revision(self):
+        return self.revisions.first()
+
+    @property
+    def approved_revision(self):
+        """
+        The revision a quotation may be built from, or None.
+
+        At most one revision is ever approved, enforced by a database
+        constraint on SurveyRevision.
+        """
+        return self.revisions.filter(status=RevisionStatus.APPROVED).first()
+
+    @property
+    def is_approved(self):
+        return self.approved_revision is not None
+
+
+# ============================================================
+# Survey revision
+# ============================================================
+
+class SurveyRevision(models.Model):
+    """
+    One recorded attempt at surveying the site.
+
+    Editable only while it is a draft. Once submitted it is evidence of
+    what the technician reported, so it is never rewritten — a reviewer
+    asking for changes gets a new revision, not an edited old one.
+    """
+
+    survey = models.ForeignKey(
+        Survey, on_delete=models.PROTECT, related_name="revisions"
+    )
+    revision_number = models.PositiveIntegerField()
+    status = models.CharField(
+        max_length=20,
+        choices=RevisionStatus.choices,
+        default=RevisionStatus.DRAFT,
+    )
+
+    # --- the roof ---
+    roof_type = models.CharField(max_length=20, choices=RoofType.choices)
+    roof_length_m = models.DecimalField(max_digits=6, decimal_places=2)
+    roof_width_m = models.DecimalField(max_digits=6, decimal_places=2)
+    usable_area_sqm = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        help_text="Shadow-free area actually available for panels.",
+    )
+    orientation = models.CharField(max_length=2, choices=Orientation.choices)
+    tilt_degrees = models.DecimalField(
+        max_digits=4, decimal_places=1,
+        validators=[MinValueValidator(0), MaxValueValidator(90)],
+        help_text="0 is flat, 90 is vertical.",
+    )
+    shading_notes = models.TextField(
+        blank=True, help_text="Trees, water tanks, neighbouring buildings."
+    )
+
+    # --- the cable run ---
+    # Drives cable quantity in F04, so it is measured, not estimated.
+    cable_distance_m = models.DecimalField(
+        max_digits=6, decimal_places=2,
+        help_text="Measured route from array to inverter, not a straight line.",
+    )
+    cable_route_notes = models.TextField(blank=True)
+
+    # --- access and grid ---
+    site_access_notes = models.TextField(
+        blank=True, help_text="Stairs, lift, crane needed, parking."
+    )
+    grid_connection_number = models.CharField(max_length=50, blank=True)
+    sanctioned_load_kw = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    grid_suitable = models.BooleanField(default=True)
+    grid_notes = models.TextField(blank=True)
+
+    # --- what the technician recommends ---
+    recommended_system_type = models.CharField(
+        max_length=20, choices=SystemType.choices
+    )
+    recommended_capacity_kw = models.DecimalField(
+        max_digits=5, decimal_places=2,
+        help_text="Advisory until approved. Not a certified design.",
+    )
+
+    # --- off-grid only ---
+    # Battery sizing needs load and backup duration. It can never be
+    # inferred from panel capacity, so an off-grid survey must carry
+    # both. Enforced in clean().
+    critical_load_kw = models.DecimalField(
+        max_digits=6, decimal_places=2, null=True, blank=True
+    )
+    backup_duration_hours = models.DecimalField(
+        max_digits=4, decimal_places=1, null=True, blank=True
+    )
+
+    # --- who and when ---
+    surveyed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name="surveys_carried_out",
+    )
+    # When the technician was on the roof, which is not when the form
+    # was filled in. Both are kept, per spec.md section 6.
+    surveyed_at = models.DateTimeField()
+
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True, related_name="surveys_reviewed",
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    review_notes = models.TextField(
+        blank=True, help_text="Required when asking for changes or rejecting."
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-revision_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["survey", "revision_number"],
+                name="unique_revision_number_per_survey",
+            ),
+            # At most one approved revision per survey. A quotation
+            # must never have two sources of truth to choose from.
+            models.UniqueConstraint(
+                fields=["survey"],
+                condition=models.Q(status="approved"),
+                name="one_approved_revision_per_survey",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.survey.enquiry.reference} rev {self.revision_number}"
+
+    @property
+    def is_editable(self):
+        return self.status == RevisionStatus.DRAFT
+
+    def clean(self):
+        """Checks that hold however the record is created."""
+        if self.recommended_system_type == SystemType.OFF_GRID:
+            if self.critical_load_kw is None or self.backup_duration_hours is None:
+                raise ValidationError(
+                    "An off-grid survey needs the critical load and the "
+                    "backup duration. Battery size cannot be guessed from "
+                    "panel capacity."
+                )
+
+        usable = _as_decimal(self.usable_area_sqm)
+        length = _as_decimal(self.roof_length_m)
+        width = _as_decimal(self.roof_width_m)
+
+        if usable and length and width and usable > length * width:
+            raise ValidationError(
+                "Usable area cannot exceed the measured roof area."
+            )
+
+    def save(self, *args, **kwargs):
+        """Numbers the revision on first insert, then refuses edits."""
+        if self.pk and not self.is_editable:
+            # update_fields is how the review flow writes its own
+            # columns; a blanket save on a locked revision is a bug.
+            if not kwargs.get("update_fields"):
+                raise ValidationError(
+                    f"Revision {self.revision_number} is "
+                    f"{self.get_status_display().lower()} and cannot be edited. "
+                    "Create a new revision instead."
+                )
+
+        if not self.pk:
+            with transaction.atomic():
+                last = (
+                    SurveyRevision.objects.select_for_update()
+                    .filter(survey=self.survey)
+                    .order_by("-revision_number")
+                    .first()
+                )
+                self.revision_number = (last.revision_number + 1) if last else 1
+                return super().save(*args, **kwargs)
+
+        return super().save(*args, **kwargs)
+
+    # --- review flow -------------------------------------------------
+
+    def submit(self):
+        """Sends the revision for review."""
+        self._require_transition(RevisionStatus.SUBMITTED)
+        self.full_clean(exclude=["revision_number"])
+        self.status = RevisionStatus.SUBMITTED
+        self.submitted_at = timezone.now()
+        self.save(update_fields=["status", "submitted_at"])
+
+    def review(self, decision, reviewer, notes=""):
+        """
+        Records an approver's decision.
+
+        Approving is what unlocks quotation generation, so only a user
+        holding the operations manager or administrator role may do it.
+        Rejecting or asking for changes always carries a reason.
+        """
+        self._require_transition(decision)
+
+        if decision == RevisionStatus.APPROVED:
+            if not can_approve_surveys(reviewer):
+                raise ValidationError(
+                    "Only an operations manager may approve a survey."
+                )
+        elif not notes.strip():
+            raise ValidationError(
+                "Say what is wrong when asking for changes or rejecting."
+            )
+
+        self.status = decision
+        self.reviewed_by = reviewer
+        self.reviewed_at = timezone.now()
+        self.review_notes = notes.strip()
+        self.save(
+            update_fields=["status", "reviewed_by", "reviewed_at", "review_notes"]
+        )
+
+    def _require_transition(self, target):
+        if target not in ALLOWED_REVISION_CHANGES.get(self.status, []):
+            raise ValidationError(
+                f"Cannot move a {self.get_status_display().lower()} revision "
+                f"to {RevisionStatus(target).label.lower()}."
+            )
+
+
+# ============================================================
+# Photos
+# ============================================================
+
+class SurveyPhoto(models.Model):
+    """Evidence attached to one revision."""
+
+    revision = models.ForeignKey(
+        SurveyRevision, on_delete=models.PROTECT, related_name="photos"
+    )
+    image = models.ImageField(upload_to="survey_photos/")
+    caption = models.CharField(max_length=200, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.caption or f"Photo {self.id}"
+
+
+# ============================================================
+# Helpers
+# ============================================================
+
+def _as_decimal(value):
+    """
+    Converts a field value to Decimal, or None if it is not a number.
+
+    clean() may run before Django has converted the field, for example
+    when a serializer validates an unsaved instance, so the value can
+    still be the string that arrived in the request.
+    """
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError):
+        return None
+
+
+# ============================================================
+# Permissions
+# ============================================================
+
+def can_approve_surveys(user):
+    """
+    Approval gates every quotation, so it is restricted.
+
+    Per the permission matrix in rules.md section 4, survey approval
+    belongs to the operations manager.
+    """
+    from apps.accounts.models import Role
+
+    return user.has_any_role(Role.OPERATIONS_MANAGER)

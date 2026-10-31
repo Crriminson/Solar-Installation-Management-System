@@ -137,7 +137,7 @@ Corroborating official sources for central, Delhi and UP:
 |---|---|---|---|
 | F01 | Customers, sites, enquiries | Implemented | 17 tests pass; end to end verified: submission returns a reference after commit, anonymous queue read refused (403) |
 | F02 | Qualification and follow-up | Implemented | 39 tests pass; transitions, lost-reason and next-action rules enforced server side |
-| F03 | Survey and approval | Not Started | — |
+| F03 | Survey and approval | Backend implemented | 62 tests pass; approved revision immutable, one-approved-per-survey enforced by a partial unique index |
 | F04 | Catalogue and packages | Not Started | Defaults set (D027, D028) |
 | F05 | Generated quotations | Not Started | Review gate set (D028) |
 | F06 | Acceptance and signatures | Not Started | — |
