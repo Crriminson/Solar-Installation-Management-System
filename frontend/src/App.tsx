@@ -10,6 +10,10 @@ import { Routes, Route } from "react-router-dom";
 import { EmptyMessage } from "./components/StateMessage";
 import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
+import PackageList from "./features/catalogue/PackageList";
+import PackageRecord from "./features/catalogue/PackageRecord";
+import ProductForm from "./features/catalogue/ProductForm";
+import ProductList from "./features/catalogue/ProductList";
 import EnquiryForm from "./features/enquiries/EnquiryForm";
 import SalesQueue from "./features/enquiries/SalesQueue";
 import SurveyList from "./features/surveys/SurveyList";
@@ -32,6 +36,11 @@ export default function App() {
         <Route path="/surveys" element={<SurveyList />} />
         <Route path="/surveys/:surveyId" element={<SurveyRecord />} />
         <Route path="/surveys/:surveyId/new" element={<SurveyStepForm />} />
+        <Route path="/catalogue/products" element={<ProductList />} />
+        <Route path="/catalogue/products/new" element={<ProductForm />} />
+        <Route path="/catalogue/products/:productId/edit" element={<ProductForm />} />
+        <Route path="/catalogue/packages" element={<PackageList />} />
+        <Route path="/catalogue/packages/:packageId" element={<PackageRecord />} />
       </Route>
 
       <Route path="*" element={<EmptyMessage>This page does not exist.</EmptyMessage>} />

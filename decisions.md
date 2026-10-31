@@ -3,7 +3,7 @@
 Last updated: 2026-10-31
 Specification version: 1.0
 Baseline status: LOCKED 2026-10-31
-Implementation status: IN PROGRESS. F01 to F03 built; see section 5
+Implementation status: IN PROGRESS. F01 to F04 built; see section 5
 
 ## 1. Current state
 
@@ -19,7 +19,7 @@ Done:
 - All five open decisions resolved (D024-D028).
 
 Not done:
-- F04 to F20.
+- F05 to F20.
 - Role permissions beyond survey review. Other endpoints only require a login.
 - Performance targets in spec.md section 12 have not been measured.
 - Six states lack an exact slab and fall back to central-only until
@@ -67,6 +67,9 @@ Not done:
 | D036 | A Django superuser holds every role | Confirmed | The first account on a new install must be able to use the app |
 | D037 | Survey review, not only approval, is limited to operations managers and administrators | Confirmed | Sending back and rejecting are the same decision as approving. rules.md section 4 |
 | D038 | An approved survey revision becomes Superseded when a newer one is approved | Confirmed | Builder decision 2026-10-31. spec.md F03 requires revising an approved survey. The approval stands until replaced, so a quotation always has one source |
+| D039 | Purchase cost is visible to Finance, Director, Operations Manager and Administrator only | Confirmed | Sales must not see it. rules.md section 4. The operations manager maintains the catalogue, so needs it |
+| D040 | Taking a package version live needs an Administrator | Confirmed | Implements the owner review in D028. Operations managers maintain packages but cannot activate them |
+| D041 | Labour rates and repair parts are catalogue products | Confirmed | A labour line is a service product with a unit and a dated price, so one price history covers both |
 
 ## 3. Resolved decisions and their consequences
 
@@ -143,7 +146,7 @@ Corroborating official sources for central, Delhi and UP:
 | F01 | Customers, sites, enquiries | In Progress | 112 backend tests and a 38-step browser run pass: public form with bill upload, staff entry with source, upload checks by file contents. Open: duplicate check matches phone only, and no screen resolves a duplicate flag |
 | F02 | Qualification and follow-up | In Progress | Queue, panel, owner assignment and My Work verified in the browser run. Open: qualification checks, audit entries, stale-edit rejection. A due date is required on screen only |
 | F03 | Survey and approval | In Progress | Capture, photos, review and revision history verified in the browser run. Locked revisions checked against the stored status; one approved revision enforced by a partial unique index. Approved surveys can be revised (D038). Open: Changes Requested ends a revision and a new one is filed, which differs from the spec's Changes Requested → Submitted and needs owner sign-off |
-| F04 | Catalogue and packages | Not Started | Defaults set (D027, D028) |
+| F04 | Catalogue and packages | In Progress | Products, dated prices, versioned packages, review gate and sizing tested, with screens verified in a browser run. Open: the real reference bills of materials and their owner review (D028). seed_catalogue only loads labelled placeholders |
 | F05 | Generated quotations | Not Started | Review gate set (D028) |
 | F06 | Acceptance and signatures | Not Started | — |
 | F07 | Orders, payments, invoices | Not Started | Terms set (D024) |

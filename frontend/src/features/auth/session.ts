@@ -10,6 +10,9 @@ export interface StaffUser {
   roles: string[];
   is_administrator: boolean;
   can_approve_surveys: boolean;
+  can_manage_catalogue: boolean;
+  can_review_packages: boolean;
+  can_view_costs: boolean;
 }
 
 interface Session {

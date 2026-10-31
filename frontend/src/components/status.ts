@@ -40,5 +40,14 @@ export const REVISION_STATUSES: Record<string, StatusInfo> = {
   superseded: { label: "Superseded", tone: "closed" },
 };
 
+export const VERSION_STATUSES: Record<string, StatusInfo> = {
+  draft: { label: "Draft", tone: "neutral" },
+  active: { label: "Active", tone: "done" },
+  retired: { label: "Retired", tone: "closed" },
+};
+
+/* A package with no reviewed version cannot reach a customer. */
+export const PACKAGE_NOT_LIVE: StatusInfo = { label: "Not live", tone: "waiting" };
+
 /* A survey opened but with nothing recorded yet. */
 export const SURVEY_NOT_STARTED: StatusInfo = { label: "Not started", tone: "neutral" };

@@ -37,6 +37,21 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
+  {
+    title: "Catalogue",
+    items: [
+      {
+        label: "Products",
+        to: "/catalogue/products",
+        roles: ["sales", "operations_manager", "warehouse", "finance", "director"],
+      },
+      {
+        label: "Packages",
+        to: "/catalogue/packages",
+        roles: ["sales", "operations_manager", "director"],
+      },
+    ],
+  },
 ];
 
 export const HOME_PATH = "/work";
