@@ -77,6 +77,7 @@ OUR_APPS = [
     "apps.customers",
     "apps.surveys",
     "apps.catalogue",
+    "apps.quotations",
     "apps.subsidies",
 ]
 
