@@ -144,7 +144,7 @@ Corroborating official sources for central, Delhi and UP:
 
 | Feature | Scope | Status | Evidence |
 |---|---|---|---|
-| F01 | Customers, sites, enquiries | In Progress | 112 backend tests and a 38-step browser run pass: public form with bill upload, staff entry with source, upload checks by file contents. Open: duplicate check matches phone only, and no screen resolves a duplicate flag |
+| F01 | Customers, sites, enquiries | Verified | Phone and normalized-address duplicate flags; explicit review with reason; both records retained. Billing-period and non-negative input validation; private bill downloads; tested role restrictions. Completion tests plus browser enquiry flow |
 | F02 | Qualification and follow-up | In Progress | Queue, panel, owner assignment and My Work verified in the browser run. Open: qualification checks, audit entries, stale-edit rejection. A due date is required on screen only |
 | F03 | Survey and approval | In Progress | Capture, photos, review and revision history verified in the browser run. Locked revisions checked against the stored status; one approved revision enforced by a partial unique index. Approved surveys can be revised (D038). Open: Changes Requested ends a revision and a new one is filed, which differs from the spec's Changes Requested → Submitted and needs owner sign-off |
 | F04 | Catalogue and packages | In Progress | Products, dated prices, versioned packages, review gate and sizing tested, with screens verified in a browser run. Open: the real reference bills of materials and their owner review (D028). seed_catalogue only loads labelled placeholders |

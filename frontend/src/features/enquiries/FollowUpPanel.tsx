@@ -17,6 +17,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
+import ActivityTimeline from "../../components/activity_timeline";
+import { hasRole, useStaffUser } from "../auth/session";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import {
   SelectField,
@@ -45,6 +47,7 @@ import {
   fetchContactLog,
   fetchStaff,
   recordContact,
+  reviewDuplicate,
 } from "./api";
 import NextStep from "./NextStep";
 import type { EnquiryListItem, EnquiryStatus } from "./types";
@@ -90,6 +93,8 @@ interface Props {
 
 export default function FollowUpPanel({ enquiry, onClose }: Props) {
   const queryClient = useQueryClient();
+  const user = useStaffUser();
+  const canWrite = hasRole(user, "sales") || hasRole(user, "operations_manager");
 
   function refreshEverything() {
     queryClient.invalidateQueries({ queryKey: ["enquiries"] });
@@ -120,12 +125,14 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
       )}
 
       <Details enquiry={enquiry} />
+      {canWrite && enquiry.is_possible_duplicate && <DuplicateReview enquiry={enquiry} onDone={refreshEverything} />}
+      {enquiry.duplicate_review && <p>Duplicate review: {enquiry.duplicate_review}. {enquiry.duplicate_review_reason}</p>}
 
-      {SURVEY_READY_STATUSES.includes(enquiry.status) && (
+      {canWrite && SURVEY_READY_STATUSES.includes(enquiry.status) && (
         <SurveyLink enquiry={enquiry} />
       )}
 
-      {isOpen && (
+      {isOpen && canWrite && (
         <>
           <OwnerForm enquiry={enquiry} onDone={refreshEverything} />
           <LogContactForm enquiry={enquiry} onDone={refreshEverything} />
@@ -140,6 +147,7 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
       )}
 
       <ContactHistory enquiryId={enquiry.id} />
+      <ActivityTimeline endpoint={`enquiries/${enquiry.id}/activity/`} revision={enquiry.revision} />
     </SidePanel>
   );
 }
@@ -595,4 +603,21 @@ function ContactHistory({ enquiryId }: { enquiryId: number }) {
 
 function channelLabel(value: string) {
   return CHANNEL_OPTIONS.find((option) => option.value === value)?.label ?? value;
+}
+
+
+function DuplicateReview({ enquiry, onDone }: { enquiry: EnquiryListItem; onDone: () => void }) {
+  const [decision, setDecision] = useState("distinct");
+  const [reason, setReason] = useState("");
+  const mutation = useMutation({ mutationFn: () => reviewDuplicate(enquiry, decision, reason), onSuccess: onDone });
+  return <section className={styles.section}>
+    <h3 className={styles.sectionTitle}>Review possible duplicate</h3>
+    <p>A phone number or site address matches {enquiry.duplicate_candidate?.full_name}, {formatPhone(enquiry.duplicate_candidate?.phone ?? "")}. Both incoming records are retained.</p>
+    <SelectField label="Review outcome" value={decision} onChange={setDecision} options={[
+      { value: "distinct", label: "Different customer or separate request" }, { value: "confirmed", label: "Confirmed duplicate — retain for history" },
+    ]} />
+    <TextAreaField label="Review reason" required value={reason} onChange={setReason} />
+    {mutation.isError && <p role="alert" className={styles.error}>{describeError(mutation.error)}</p>}
+    <Button disabled={!reason.trim() || mutation.isPending} onClick={() => mutation.mutate()}>Record duplicate review</Button>
+  </section>;
 }

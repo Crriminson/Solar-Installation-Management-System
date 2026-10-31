@@ -48,6 +48,8 @@ export type ContactChannel =
 export interface StaffMember {
   id: number;
   name: string;
+  roles: string[];
+  is_administrator: boolean;
 }
 
 export interface ContactLogEntry {
@@ -60,6 +62,11 @@ export interface ContactLogEntry {
 }
 
 export interface EnquiryListItem {
+  revision: number;
+  possible_duplicate_of: number | null;
+  duplicate_candidate: { id: number; full_name: string; phone: string } | null;
+  duplicate_review: string;
+  duplicate_review_reason: string;
   id: number;
   reference: string;
   source: string;

@@ -90,3 +90,8 @@ export function changeStatus(
 ) {
   return apiPost<EnquiryListItem>(`enquiries/${enquiryId}/status/`, data);
 }
+
+
+export function reviewDuplicate(enquiry: EnquiryListItem, decision: string, reason: string) {
+  return apiPost<EnquiryListItem>(`enquiries/${enquiry.id}/duplicate-review/`, { revision: enquiry.revision, decision, reason });
+}
