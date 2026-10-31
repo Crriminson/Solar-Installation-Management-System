@@ -12,11 +12,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { describeError } from "../../api/client";
-import Button from "../../components/Button";
+import Button, { ButtonLink } from "../../components/Button";
 import { SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
-import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { EmptyMessage, ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { dateTimeInputToIso, formatDate } from "../../lib/format";
 import { WARRANTY_STATUSES } from "../warranties/status";
@@ -53,8 +53,20 @@ export default function TicketNew() {
     onSuccess: (ticket) => navigate(`/tickets/${ticket.id}`),
   });
 
-  if (!customerId) return <EmptyMessage>Find the customer on the Support screen first.</EmptyMessage>;
-  if (equipment.isPending) return <LoadingMessage label="Loading equipment…" />;
+  /* A ticket is always about one customer's equipment, so the screen
+     cannot start without one. Say where to get one rather than leaving
+     a dead end. */
+  if (!customerId) {
+    return <>
+      <PageHeader title="New ticket" back={{ to: "/tickets", label: "Support" }} />
+      <EmptyMessage action={<ButtonLink to="/tickets" variant="primary">Find the customer</ButtonLink>}>
+        A ticket is raised against a customer's equipment. Search for them on
+        the Support screen, then raise it from there.
+      </EmptyMessage>
+    </>;
+  }
+
+  if (equipment.isPending) return <LoadingRecord label="Loading equipment…" />;
   if (equipment.isError) {
     return <ErrorMessage error={equipment.error} onRetry={equipment.refetch} />;
   }
