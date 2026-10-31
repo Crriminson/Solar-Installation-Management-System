@@ -54,3 +54,24 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* On a phone a step is often taller than the screen, and the action
+   that moves it on must not scroll away from the thumb. It sits above
+   the destination bar, not under it. */
+@media (max-width: 899px) {
+  .actions {
+    position: sticky;
+    bottom: var(--sticky-bottom);
+    z-index: 5;
+    margin-inline: calc(var(--space-3) * -1);
+    margin-bottom: 0;
+    padding: var(--space-3);
+    background: var(--color-background);
+    border-top: 1px solid var(--color-border);
+  }
+
+  .actions > button,
+  .actions > a {
+    flex: 1;
+  }
+}
