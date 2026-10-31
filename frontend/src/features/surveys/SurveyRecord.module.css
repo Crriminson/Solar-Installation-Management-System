@@ -1,0 +1,126 @@
+/* One survey in full. */
+
+.summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.muted {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.section {
+  max-width: 980px;
+  margin-top: var(--space-4);
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.older {
+  font-weight: 400;
+}
+
+.notice {
+  max-width: 980px;
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  color: var(--tone-waiting-text);
+  background: var(--tone-waiting-bg);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+.review {
+  max-width: 980px;
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Measurements, in groups that flow to the width available. */
+.groups {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.group {
+  min-width: 0;
+}
+
+.groupTitle {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.photoSection {
+  margin-top: var(--space-4);
+}
+
+.photos {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--color-hover);
+  border-radius: var(--radius);
+}
+
+.addPhoto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 420px;
+  margin-top: var(--space-3);
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--tone-blocked-text);
+  background: var(--tone-blocked-bg);
+  border-radius: var(--radius);
+}

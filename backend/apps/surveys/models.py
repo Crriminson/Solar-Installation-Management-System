@@ -65,6 +65,12 @@ LOCKED_STATUSES = [
     RevisionStatus.REJECTED,
 ]
 
+# The only columns the review flow may write once a revision is locked.
+# Everything else is evidence of what the technician reported.
+REVIEW_COLUMNS = {
+    "status", "submitted_at", "reviewed_by", "reviewed_at", "review_notes",
+}
+
 
 class RoofType(models.TextChoices):
     FLAT_RCC = "flat_rcc", "Flat RCC"
@@ -275,28 +281,45 @@ class SurveyRevision(models.Model):
 
     def save(self, *args, **kwargs):
         """Numbers the revision on first insert, then refuses edits."""
-        if self.pk and not self.is_editable:
-            # update_fields is how the review flow writes its own
-            # columns; a blanket save on a locked revision is a bug.
-            if not kwargs.get("update_fields"):
-                raise ValidationError(
-                    f"Revision {self.revision_number} is "
-                    f"{self.get_status_display().lower()} and cannot be edited. "
-                    "Create a new revision instead."
-                )
+        if self.pk:
+            self._refuse_edit_if_locked(kwargs.get("update_fields"))
+            return super().save(*args, **kwargs)
 
-        if not self.pk:
-            with transaction.atomic():
-                last = (
-                    SurveyRevision.objects.select_for_update()
-                    .filter(survey=self.survey)
-                    .order_by("-revision_number")
-                    .first()
-                )
-                self.revision_number = (last.revision_number + 1) if last else 1
-                return super().save(*args, **kwargs)
+        # Locks the parent survey, not the revisions: a first revision
+        # has no sibling rows to lock, so two at once would both be
+        # numbered 1. The second now waits and becomes 2.
+        with transaction.atomic():
+            Survey.objects.select_for_update().get(pk=self.survey_id)
+            last = (
+                SurveyRevision.objects.filter(survey=self.survey)
+                .order_by("-revision_number")
+                .first()
+            )
+            self.revision_number = (last.revision_number + 1) if last else 1
+            return super().save(*args, **kwargs)
 
-        return super().save(*args, **kwargs)
+    def _refuse_edit_if_locked(self, update_fields):
+        """
+        Judges by the status in the database, never the one in memory.
+
+        An in-memory status can be stale, or simply changed back to
+        draft by the caller, and neither may unlock reviewed evidence.
+        """
+        stored_status = (
+            SurveyRevision.objects.filter(pk=self.pk)
+            .values_list("status", flat=True)
+            .first()
+        )
+        if stored_status not in LOCKED_STATUSES:
+            return
+
+        is_review_write = update_fields and set(update_fields) <= REVIEW_COLUMNS
+        if not is_review_write:
+            raise ValidationError(
+                f"Revision {self.revision_number} is "
+                f"{RevisionStatus(stored_status).label.lower()} and cannot be "
+                "edited. Create a new revision instead."
+            )
 
     # --- review flow -------------------------------------------------
 
@@ -314,16 +337,18 @@ class SurveyRevision(models.Model):
 
         Approving is what unlocks quotation generation, so only a user
         holding the operations manager or administrator role may do it.
-        Rejecting or asking for changes always carries a reason.
+        The same applies to sending one back or rejecting it, which are
+        the other half of the same decision. Both of those always carry
+        a reason.
         """
         self._require_transition(decision)
 
-        if decision == RevisionStatus.APPROVED:
-            if not can_approve_surveys(reviewer):
-                raise ValidationError(
-                    "Only an operations manager may approve a survey."
-                )
-        elif not notes.strip():
+        if not can_approve_surveys(reviewer):
+            raise ValidationError(
+                "Only an operations manager may review a survey."
+            )
+
+        if decision != RevisionStatus.APPROVED and not notes.strip():
             raise ValidationError(
                 "Say what is wrong when asking for changes or rejecting."
             )

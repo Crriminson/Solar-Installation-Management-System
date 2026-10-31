@@ -27,6 +27,9 @@ BUSINESS_TIMEZONE = "Asia/Kolkata"
 
 MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024                     # 10 MB per file
 ALLOWED_UPLOAD_TYPES = ["application/pdf", "image/jpeg", "image/png"]
+ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"]
+MAX_IMAGE_DIMENSION_PX = 8000                                # longest side
+MAX_PHOTOS_PER_RECORD = 20
 
 DEFAULT_PAGE_SIZE = 25                                       # rows per page
 MAX_PAGE_SIZE = 100                                          # hard ceiling

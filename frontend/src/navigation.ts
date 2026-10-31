@@ -30,6 +30,11 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         to: "/enquiries",
         roles: ["sales", "operations_manager", "director"],
       },
+      {
+        label: "Surveys",
+        to: "/surveys",
+        roles: ["sales", "operations_manager", "technician", "director"],
+      },
     ],
   },
 ];

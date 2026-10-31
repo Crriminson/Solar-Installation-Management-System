@@ -4,10 +4,12 @@ from django.urls import path
 
 from .views import (
     RevisionCreateView,
+    RevisionPhotoView,
     RevisionReviewView,
     RevisionSubmitView,
     SurveyDetailView,
     SurveyListView,
+    SurveyPhotoFileView,
     SurveyStartView,
 )
 
@@ -18,4 +20,6 @@ urlpatterns = [
     path("surveys/<int:pk>/revisions/", RevisionCreateView.as_view(), name="revision-create"),
     path("revisions/<int:pk>/submit/", RevisionSubmitView.as_view(), name="revision-submit"),
     path("revisions/<int:pk>/review/", RevisionReviewView.as_view(), name="revision-review"),
+    path("revisions/<int:pk>/photos/", RevisionPhotoView.as_view(), name="revision-photos"),
+    path("survey-photos/<int:pk>/", SurveyPhotoFileView.as_view(), name="survey-photo-file"),
 ]

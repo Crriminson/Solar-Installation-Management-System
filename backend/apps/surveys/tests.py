@@ -117,6 +117,37 @@ class ImmutabilityTests(TestCase):
         with self.assertRaises(ValidationError):
             self.revision.save()
 
+    def approve(self):
+        manager = User.objects.create_user(
+            username="reviewer", password="x", roles=[Role.OPERATIONS_MANAGER]
+        )
+        self.revision.submit()
+        self.revision.review(RevisionStatus.APPROVED, reviewer=manager)
+
+    def test_setting_the_status_back_to_draft_does_not_unlock_it(self):
+        """The lock reads the database, not the copy being saved."""
+        self.approve()
+
+        self.revision.status = RevisionStatus.DRAFT
+        self.revision.cable_distance_m = "99.00"
+        with self.assertRaises(ValidationError):
+            self.revision.save()
+
+    def test_naming_a_measurement_column_does_not_unlock_it(self):
+        self.approve()
+
+        self.revision.cable_distance_m = "77.00"
+        with self.assertRaises(ValidationError):
+            self.revision.save(update_fields=["cable_distance_m"])
+
+    def test_a_stale_copy_cannot_overwrite_a_submitted_revision(self):
+        stale = SurveyRevision.objects.get(pk=self.revision.pk)
+        self.revision.submit()
+
+        stale.cable_distance_m = "55.00"
+        with self.assertRaises(ValidationError):
+            stale.save()
+
 
 class ReviewFlowTests(TestCase):
     def setUp(self):
@@ -147,6 +178,13 @@ class ReviewFlowTests(TestCase):
         self.survey.refresh_from_db()
         self.assertTrue(self.survey.is_approved)
         self.assertEqual(self.survey.approved_revision, self.revision)
+
+    def test_a_technician_cannot_reject_or_send_back_a_survey(self):
+        self.revision.submit()
+
+        for decision in [RevisionStatus.REJECTED, RevisionStatus.CHANGES_REQUESTED]:
+            with self.assertRaises(ValidationError):
+                self.revision.review(decision, reviewer=self.technician, notes="No")
 
     def test_an_administrator_can_also_approve(self):
         admin = User.objects.create_user(

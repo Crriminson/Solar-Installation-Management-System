@@ -30,3 +30,14 @@ export const ENQUIRY_STATUSES: Record<string, StatusInfo> = {
   survey_scheduled: { label: "Survey scheduled", tone: "waiting" },
   lost: { label: "Lost", tone: "closed" },
 };
+
+export const REVISION_STATUSES: Record<string, StatusInfo> = {
+  draft: { label: "Draft", tone: "neutral" },
+  submitted: { label: "Submitted", tone: "waiting" },
+  changes_requested: { label: "Changes requested", tone: "blocked" },
+  approved: { label: "Approved", tone: "done" },
+  rejected: { label: "Rejected", tone: "closed" },
+};
+
+/* A survey opened but with nothing recorded yet. */
+export const SURVEY_NOT_STARTED: StatusInfo = { label: "Not started", tone: "neutral" };

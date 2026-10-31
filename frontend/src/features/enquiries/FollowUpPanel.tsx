@@ -12,6 +12,7 @@
 */
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
@@ -36,6 +37,7 @@ import {
   formatQuantity,
   nowForDateTimeInput,
 } from "../../lib/format";
+import { startSurvey } from "../surveys/api";
 import {
   assignEnquiry,
   billDownloadUrl,
@@ -63,6 +65,9 @@ const STAGE_GUIDANCE: Record<string, string> = {
   qualified: "Book the site survey with the customer.",
   survey_scheduled: "Waiting on the site survey.",
 };
+
+/* A survey follows qualification. */
+const SURVEY_READY_STATUSES: readonly EnquiryStatus[] = ["qualified", "survey_scheduled"];
 
 const CHANNEL_OPTIONS = [
   { value: "phone", label: "Phone call" },
@@ -115,6 +120,10 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
       )}
 
       <Details enquiry={enquiry} />
+
+      {SURVEY_READY_STATUSES.includes(enquiry.status) && (
+        <SurveyLink enquiry={enquiry} />
+      )}
 
       {isOpen && (
         <>
@@ -224,6 +233,35 @@ function Details({ enquiry }: { enquiry: EnquiryListItem }) {
 
       {enquiry.lost_reason && (
         <p className={styles.notice}>Lost: {enquiry.lost_reason}</p>
+      )}
+    </section>
+  );
+}
+
+
+// ============================================================
+// The survey
+// ============================================================
+
+/* Opening is safe to repeat: an enquiry has one survey. */
+function SurveyLink({ enquiry }: { enquiry: EnquiryListItem }) {
+  const navigate = useNavigate();
+
+  const mutation = useMutation({
+    mutationFn: () => startSurvey(enquiry.id),
+    onSuccess: (survey) => navigate(`/surveys/${survey.id}`),
+  });
+
+  return (
+    <section className={styles.section}>
+      <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+        {mutation.isPending ? "Opening…" : "Open survey"}
+      </Button>
+
+      {mutation.isError && (
+        <p className={styles.error} role="alert">
+          {describeError(mutation.error)}
+        </p>
       )}
     </section>
   );

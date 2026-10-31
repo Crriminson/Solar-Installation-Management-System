@@ -12,6 +12,9 @@ import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
 import EnquiryForm from "./features/enquiries/EnquiryForm";
 import SalesQueue from "./features/enquiries/SalesQueue";
+import SurveyList from "./features/surveys/SurveyList";
+import SurveyRecord from "./features/surveys/SurveyRecord";
+import SurveyStepForm from "./features/surveys/SurveyStepForm";
 import MyWorkPage from "./features/work/MyWorkPage";
 
 export default function App() {
@@ -26,6 +29,9 @@ export default function App() {
         <Route path="/work" element={<MyWorkPage />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
+        <Route path="/surveys" element={<SurveyList />} />
+        <Route path="/surveys/:surveyId" element={<SurveyRecord />} />
+        <Route path="/surveys/:surveyId/new" element={<SurveyStepForm />} />
       </Route>
 
       <Route path="*" element={<EmptyMessage>This page does not exist.</EmptyMessage>} />

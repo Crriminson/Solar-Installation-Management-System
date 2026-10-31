@@ -18,6 +18,7 @@ import { hasRole, useStaffUser, type StaffUser } from "../auth/session";
 import { fetchEnquiries, type QueueFilters } from "../enquiries/api";
 import { QUEUE_REFRESH_MS } from "../enquiries/queue";
 import type { EnquiryListItem } from "../enquiries/types";
+import { fetchSurveys, type SurveyFilters } from "../surveys/api";
 import styles from "./MyWorkPage.module.css";
 
 /* How many urgent items to list. The cue opens the rest. */
@@ -27,6 +28,7 @@ export default function MyWorkPage() {
   const user = useStaffUser();
   const showSales = hasRole(user, "sales");
   const showOperations = hasRole(user, "operations_manager");
+  const showField = hasRole(user, "technician");
 
   return (
     <>
@@ -34,7 +36,8 @@ export default function MyWorkPage() {
 
       {showSales && <SalesWork />}
       {showOperations && <OperationsWork />}
-      {!showSales && !showOperations && <NoQueue user={user} />}
+      {showField && <TechnicianWork />}
+      {!showSales && !showOperations && !showField && <NoQueue user={user} />}
     </>
   );
 }
@@ -81,16 +84,36 @@ function SalesWork() {
 
 function OperationsWork() {
   const unassigned = useCount({ unassigned: true });
+  const toApprove = useSurveyCount({ pending: true });
 
   return (
     <section className={styles.group}>
       <h2 className={styles.groupTitle}>Operations</h2>
       <div className={styles.cues}>
         <Cue
+          label="Surveys to approve"
+          count={toApprove}
+          to="/surveys?view=pending"
+          urgent
+        />
+        <Cue
           label="Leads with no owner"
           count={unassigned}
           to="/enquiries?view=unassigned"
         />
+      </div>
+    </section>
+  );
+}
+
+function TechnicianWork() {
+  const inProgress = useSurveyCount({ open: true });
+
+  return (
+    <section className={styles.group}>
+      <h2 className={styles.groupTitle}>Field</h2>
+      <div className={styles.cues}>
+        <Cue label="Surveys not approved" count={inProgress} to="/surveys?view=open" />
       </div>
     </section>
   );
@@ -137,4 +160,13 @@ function queueQuery(filters: QueueFilters) {
 
 function useCount(filters: QueueFilters) {
   return useQuery(queueQuery(filters)).data?.count;
+}
+
+function useSurveyCount(filters: SurveyFilters) {
+  const { data } = useQuery({
+    queryKey: ["surveys", "work", filters],
+    queryFn: () => fetchSurveys(filters),
+    refetchInterval: QUEUE_REFRESH_MS,
+  });
+  return data?.count;
 }
