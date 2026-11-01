@@ -3,6 +3,8 @@
 import type { StatusInfo } from "../../components/status";
 
 export const JOB_STATUSES: Record<string, StatusInfo> = {
+  // Waiting on Operations to give it a date and a crew.
+  awaiting_scheduling: { label: "Awaiting scheduling", tone: "waiting" },
   scheduled: { label: "Scheduled", tone: "neutral" },
   in_progress: { label: "In progress", tone: "active" },
   awaiting_acceptance: { label: "Awaiting customer", tone: "waiting" },

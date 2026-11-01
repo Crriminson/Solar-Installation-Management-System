@@ -193,13 +193,16 @@ def _settle_purchase_status(purchase, actor):
 
 @transaction.atomic
 def move_stock(actor, *, unit=None, lot=None, to_status, reason,
-               quantity=None, order=None, note=""):
+               quantity=None, order=None, note="", clear_order=False):
     """
     The only way a stock item changes state.
 
     Locks the item, checks the move is allowed, writes the new status and
     the movement together. Callers in F09 to F11 come through here rather
     than touching status themselves.
+
+    clear_order unlinks the item from its order, for a released
+    reservation. The movement still names the order it came back from.
     """
     if (unit is None) == (lot is None):
         raise ValidationError({"stock": ["Name exactly one unit or one lot."]})
@@ -227,6 +230,8 @@ def move_stock(actor, *, unit=None, lot=None, to_status, reason,
     fields = {"status": to_status, "updated_at": timezone.now()}
     if order is not None:
         fields["order"] = order
+    if clear_order:
+        fields["order"] = None
 
     if unit is not None:
         SerializedUnit.objects.filter(pk=item.pk).update(**fields)

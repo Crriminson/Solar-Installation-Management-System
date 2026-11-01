@@ -30,8 +30,10 @@ import { AddIcon } from "../../design/icons";
 const COLUMNS: readonly Column<Job>[] = [
   {
     header: "When",
-    render: (job) => <>{formatDateTime(job.starts_at)}
-      <div className={styles.muted}>to {formatTime(job.ends_at)}</div></>,
+    render: (job) => job.starts_at && job.ends_at
+      ? <>{formatDateTime(job.starts_at)}
+          <div className={styles.muted}>to {formatTime(job.ends_at)}</div></>
+      : <span className={styles.muted}>Not booked yet</span>,
   },
   { header: "Work", render: (job) => JOB_KINDS[job.kind] ?? job.kind },
   {
@@ -56,6 +58,8 @@ const COLUMNS: readonly Column<Job>[] = [
 
 const VIEWS = [
   { key: "all", label: "All" },
+  // Confirmed orders' installations land here until somebody books them.
+  { key: "awaiting_scheduling", label: "Awaiting scheduling" },
   { key: "scheduled", label: "Scheduled" },
   { key: "in_progress", label: "In progress" },
   { key: "awaiting_acceptance", label: "Awaiting customer" },

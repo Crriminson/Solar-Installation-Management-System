@@ -4,6 +4,8 @@ Scheduling endpoints (F10).
     GET  /api/v1/jobs/                   the diary
     GET  /api/v1/jobs/<id>/              one job
     POST /api/v1/jobs/create/            book a visit and staff it
+    POST /api/v1/jobs/open-installation/ an order's installation, awaiting a date
+    POST /api/v1/jobs/<id>/schedule/     give a waiting job its slot and crew
     POST /api/v1/jobs/<id>/reschedule/   move it, with a reason
     POST /api/v1/jobs/<id>/block/        record a delay against an owner
     POST /api/v1/jobs/<id>/start/        crew on site
@@ -13,18 +15,23 @@ A technician sees only their own jobs, and a thinner payload: spec.md
 F10 asks for the detail the job requires and no more.
 """
 
+from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import Role
 from apps.core.api import StaffAccess
+from apps.orders.models import Order, OrderStatus
 
 from .models import Job
 from .serializers import (BlockSerializer, JobCreateSerializer, JobSerializer,
-                          RescheduleSerializer, RevisionSerializer,
-                          TechnicianJobSerializer)
-from .services import block_job, cancel_job, create_job, reschedule_job, start_job
+                          OrderReferenceSerializer, RescheduleSerializer, RevisionSerializer,
+                          ScheduleSerializer, TechnicianJobSerializer)
+from .services import (block_job, cancel_job, create_job, open_installation_job,
+                       reschedule_job, schedule_job, start_job)
 
 
 class SchedulingAccess(StaffAccess):
@@ -79,6 +86,28 @@ class JobListView(generics.ListAPIView):
         return queryset.distinct()
 
 
+class OpenInstallationView(APIView):
+    """
+    Gives an order its installation job if it has none.
+
+    Confirmation does this itself; this is for an order confirmed before
+    it did. Calling again returns the same job.
+    """
+
+    permission_classes = [SchedulingAccess]
+
+    @transaction.atomic
+    def post(self, request):
+        serializer = OrderReferenceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        order = get_object_or_404(Order.objects.select_for_update(),
+                                  pk=serializer.validated_data["order"])
+        if order.status == OrderStatus.CANCELLED:
+            raise ValidationError({"order": ["A cancelled order is not installed."]})
+        job = open_installation_job(order, request.user)
+        return Response(JobSerializer(jobs_with_detail().get(pk=job.pk)).data, status=201)
+
+
 class JobDetailView(generics.RetrieveAPIView):
     permission_classes = [SchedulingAccess]
 
@@ -103,17 +132,19 @@ class JobCreateView(APIView):
 
 
 class JobActionView(APIView):
-    """One place for the four state changes, so they share their plumbing."""
+    """One place for the state changes, so they share their plumbing."""
 
     permission_classes = [SchedulingAccess]
 
     SERIALIZERS = {
+        "schedule": ScheduleSerializer,
         "reschedule": RescheduleSerializer,
         "block": BlockSerializer,
         "start": RevisionSerializer,
         "cancel": RevisionSerializer,
     }
     HANDLERS = {
+        "schedule": schedule_job,
         "reschedule": reschedule_job,
         "block": block_job,
         "start": start_job,

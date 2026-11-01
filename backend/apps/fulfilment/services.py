@@ -38,10 +38,12 @@ ONE = Decimal("1.00")
 @transaction.atomic
 def open_fulfilment(order_id, actor):
     """
-    Builds the packing checklist from the accepted order.
+    Builds the packing checklist from the accepted order, and reserves.
 
-    Calling twice returns the existing fulfilment: the checklist comes
+    Calling again returns the existing fulfilment: the checklist comes
     from an immutable quotation revision, so there is nothing to refresh.
+    If nothing is reserved yet, opening again tries again, so stock that
+    arrived after a shortage is claimed by opening the list.
     """
     order = Order.objects.select_for_update().filter(pk=order_id).first()
     if order is None:
@@ -49,22 +51,90 @@ def open_fulfilment(order_id, actor):
 
     existing = Fulfilment.objects.filter(order=order).first()
     if existing is not None:
+        if existing.status in (FulfilmentStatus.PENDING, FulfilmentStatus.BLOCKED):
+            return reserve_stock(existing.pk, actor)
         return existing
 
     if order.status == OrderStatus.CANCELLED:
         raise ValidationError({"order": ["A cancelled order is not packed."]})
 
-    fulfilment = Fulfilment.objects.create(order=order)
-
-    # Labour is not stocked, so it is never on a packing list. Checked on
-    # both the category and the tracking method: a product mis-set on one
-    # must not put a line on the checklist that nobody can ever scan.
-    lines = order.quotation.lines.select_related("product").exclude(
-        models.Q(product__tracking_method=TrackingMethod.SERVICE)
-        | models.Q(product__category=Category.SERVICE)
-    )
+    lines = _physical_lines(order)
     if not lines:
         raise ValidationError({"order": ["This order has nothing physical to pack."]})
+
+    fulfilment = _create_checklist(order, lines, actor)
+
+    # Reserve straight away. A warehouse worker should meet the order
+    # either ready to pack or blocked, never sitting at Pending waiting
+    # for somebody to press a button they did not know about.
+    return reserve_stock(fulfilment.pk, actor)
+
+
+def prepare_for_order(order, actor):
+    """
+    The warehouse requirement, created when the order is confirmed (F07).
+
+    This runs inside the confirmation, so it must never undo it. An order
+    with nothing physical has no packing list. A shortage is not a
+    failure: it blocks the list and names what to buy. A reservation that
+    does fail, because another order took the stock mid-claim, is rolled
+    back to a savepoint and leaves the list Pending for the warehouse to
+    open again.
+    """
+    lines = _physical_lines(order)
+    if not lines:
+        return None
+
+    fulfilment = _create_checklist(order, lines, actor)
+    try:
+        with transaction.atomic():
+            return reserve_stock(fulfilment.pk, actor)
+    except ValidationError as error:
+        record_event(fulfilment, "reservation_deferred", actor, reason=str(error.detail))
+        return fulfilment
+
+
+def release_for_cancelled_order(order, actor, reason):
+    """
+    Puts a cancelled order's reserved stock back on the shelf.
+
+    Every unit and lot goes back through move_stock, so the release is a
+    recorded movement like the reservation was, and loses its link to the
+    order. Refused once the goods have left: that is a return.
+    """
+    fulfilment = Fulfilment.objects.select_for_update().filter(order=order).first()
+    if fulfilment is None:
+        return
+    _require_move(fulfilment, FulfilmentStatus.CANCELLED)
+
+    note = f"Released: {order.reference} was cancelled"
+    for unit in _reserved_units(fulfilment):
+        move_stock(actor, unit=unit, to_status=StockStatus.AVAILABLE,
+                   reason=MovementReason.RELEASE, order=order, clear_order=True, note=note)
+    for lot in _reserved_lots(fulfilment):
+        move_stock(actor, lot=lot, to_status=StockStatus.AVAILABLE,
+                   reason=MovementReason.RELEASE, order=order, clear_order=True, note=note)
+
+    _move(fulfilment, FulfilmentStatus.CANCELLED, actor)
+    record_event(fulfilment, "released", actor, reason=reason)
+
+
+def _physical_lines(order):
+    """
+    The quotation lines that go in a box.
+
+    Labour is not stocked, so it is never on a packing list. Checked on
+    both the category and the tracking method: a product mis-set on one
+    must not put a line on the checklist that nobody can ever scan.
+    """
+    return list(order.quotation.lines.select_related("product").exclude(
+        models.Q(product__tracking_method=TrackingMethod.SERVICE)
+        | models.Q(product__category=Category.SERVICE)
+    ))
+
+
+def _create_checklist(order, lines, actor):
+    fulfilment = Fulfilment.objects.create(order=order)
 
     for line in lines:
         PackingLine.objects.create(
@@ -79,11 +149,7 @@ def open_fulfilment(order_id, actor):
 
     record_event(fulfilment, "opened", actor,
                  after={"order": order.reference, "lines": len(lines)})
-
-    # Reserve straight away. A warehouse worker should meet the order
-    # either ready to pack or blocked, never sitting at Pending waiting
-    # for somebody to press a button they did not know about.
-    return reserve_stock(fulfilment.pk, actor)
+    return fulfilment
 
 
 # ============================================================

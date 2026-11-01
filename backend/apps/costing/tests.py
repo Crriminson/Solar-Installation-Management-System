@@ -47,11 +47,21 @@ class CostFixture(SupportFixture):
         self.job = self.make_job(JobKind.INSTALLATION)
 
     def make_job(self, kind, ticket=None):
-        job = Job.objects.create(
-            kind=kind, site=self.order.site, order=self.order, ticket=ticket,
-            status=JobStatus.IN_PROGRESS, created_by=self.manager,
-            starts_at=business_date_time(), ends_at=business_date_time(hours=2),
-        )
+        if kind == JobKind.INSTALLATION:
+            # Confirming the order already opened its installation (F07),
+            # and an order has only one: put the crew on that job.
+            job = Job.objects.get(order=self.order, kind=kind)
+            Job.objects.filter(pk=job.pk).update(
+                status=JobStatus.IN_PROGRESS,
+                starts_at=business_date_time(), ends_at=business_date_time(hours=2),
+            )
+            job.refresh_from_db()
+        else:
+            job = Job.objects.create(
+                kind=kind, site=self.order.site, order=self.order, ticket=ticket,
+                status=JobStatus.IN_PROGRESS, created_by=self.manager,
+                starts_at=business_date_time(), ends_at=business_date_time(hours=2),
+            )
         job.assignments.create(technician=self.technician, is_lead=True)
         return job
 

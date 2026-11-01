@@ -21,15 +21,17 @@ export interface ScheduleChange {
 export interface Job {
   id: number;
   kind: "survey" | "installation" | "service";
-  status: "scheduled" | "in_progress" | "awaiting_acceptance" | "completed" | "cancelled";
+  status: "awaiting_scheduling" | "scheduled" | "in_progress" | "awaiting_acceptance"
+    | "completed" | "cancelled";
   site?: number;
   site_address: string;
   customer_name: string;
   order?: number | null;
   order_reference?: string;
   survey?: number | null;
-  starts_at: string;
-  ends_at: string;
+  /* Empty only while the job is awaiting scheduling. */
+  starts_at: string | null;
+  ends_at: string | null;
   notes: string;
   is_blocked: boolean;
   blocked_reason: string;

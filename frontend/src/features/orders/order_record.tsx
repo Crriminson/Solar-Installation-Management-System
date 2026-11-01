@@ -4,6 +4,10 @@
   The dispatch banner is the point of this screen. Warehouse staff need
   one unambiguous answer to "can this go out?", and that answer is the
   server's, computed from cleared money only.
+
+  Confirming the order sent it to the warehouse and the diary (spec.md
+  F07), so this screen says where it went and links to both. An order
+  confirmed before that was automatic can be sent on from here.
 */
 
 import { useState } from "react";
@@ -23,6 +27,10 @@ import { useToast } from "../../components/ToastContext";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
 import JobCostSection from "../costing/job_cost_section";
+import { openFulfilment } from "../fulfilment/api";
+import { FULFILMENT_STATUSES } from "../fulfilment/status";
+import { openInstallationJob } from "../scheduling/api";
+import { JOB_STATUSES } from "../scheduling/status";
 import OrderWarrantiesSection from "../warranties/order_warranties";
 import { allocatePayment, cancelOrder, clearPayment, fetchOrder, issueBalanceInvoice,
          recordPayment, reversePayment } from "./api";
@@ -48,11 +56,18 @@ function OrderDetails({ order }: { order: Order }) {
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
   const queryClient = useQueryClient();
+  const confirm = useToast();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["orders"] });
 
   const cancellation = useMutation({
     mutationFn: () => cancelOrder(order, reason),
-    onSuccess: () => { setCancelling(false); refresh(); },
+    onSuccess: () => {
+      setCancelling(false);
+      confirm(`Order ${order.reference} cancelled`);
+      refresh();
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      queryClient.invalidateQueries({ queryKey: ["fulfilments"] });
+    },
   });
   const balance = useMutation({
     mutationFn: () => issueBalanceInvoice(order),
@@ -103,6 +118,8 @@ function OrderDetails({ order }: { order: Order }) {
       </dl>
     </section>
 
+    <HandoffSection order={order} open={open} />
+
     <section className={styles.section}>
       <h2>Invoices</h2>
       <DataTable caption="Invoices" columns={invoiceColumns} rows={order.invoices}
@@ -130,11 +147,86 @@ function OrderDetails({ order }: { order: Order }) {
       confirmLabel="Cancel order" pending={cancellation.isPending}
       error={cancellation.isError ? describeError(cancellation.error) : null}
       onConfirm={() => cancellation.mutate()} onCancel={() => setCancelling(false)}>
-      <p>Money already taken is returned as a refund, not erased.</p>
+      <p>Reserved stock goes back on the shelf and the installation is called off.
+        Money already taken is returned as a refund, not erased.</p>
       <TextAreaField label="Why is this order cancelled?" required value={reason}
         onChange={setReason} />
     </ConfirmDialog>}
   </>;
+}
+
+// ============================================================
+// Where the order went
+// ============================================================
+
+function HandoffSection({ order, open }: { order: Order; open: boolean }) {
+  const user = useStaffUser();
+  const queryClient = useQueryClient();
+  const confirm = useToast();
+  const isOperations = hasRole(user, "operations_manager");
+  const canPack = isOperations || hasRole(user, "warehouse");
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["orders"] });
+    queryClient.invalidateQueries({ queryKey: ["jobs"] });
+    queryClient.invalidateQueries({ queryKey: ["fulfilments"] });
+  };
+  const packing = useMutation({
+    mutationFn: () => openFulfilment(order.id),
+    onSuccess: () => { confirm(`Packing list opened for ${order.reference}`); refresh(); },
+  });
+  const installation = useMutation({
+    mutationFn: () => openInstallationJob(order.id),
+    onSuccess: () => { confirm(`Installation for ${order.reference} awaits scheduling`); refresh(); },
+  });
+
+  const { fulfilment, installation: job } = order;
+
+  return <section className={styles.section}>
+    <h2>Delivery and installation</h2>
+    <dl className={styles.facts}>
+      <dt>Packing</dt>
+      <dd>
+        {fulfilment
+          ? <>
+              <StatusBadge status={FULFILMENT_STATUSES[fulfilment.status]} />
+              {fulfilment.status === "blocked" &&
+                <div className={styles.muted}>{fulfilment.blocked_reason}</div>}
+            </>
+          : "No packing list"}
+      </dd>
+      <dt>Installation</dt>
+      <dd>
+        {job
+          ? <>
+              <StatusBadge status={JOB_STATUSES[job.status]} />
+              <div className={styles.muted}>
+                {job.starts_at ? formatDateTime(job.starts_at) : "Not booked yet"}
+              </div>
+            </>
+          : "No installation job"}
+      </dd>
+    </dl>
+
+    <div className={styles.actions}>
+      {fulfilment && <ButtonLink to={`/packing/${fulfilment.id}`}>Packing list</ButtonLink>}
+      {job && (job.status === "awaiting_scheduling" && isOperations
+        ? <ButtonLink variant="primary" to={`/schedule/${job.id}`}>Book the installation</ButtonLink>
+        : <ButtonLink to={`/schedule/${job.id}`}>Installation job</ButtonLink>)}
+
+      {/* For an order confirmed before confirmation did these itself. */}
+      {open && !fulfilment && canPack &&
+        <Button loading={packing.isPending} onClick={() => packing.mutate()}>
+          Open packing list
+        </Button>}
+      {open && !job && isOperations &&
+        <Button loading={installation.isPending} onClick={() => installation.mutate()}>
+          Create installation job
+        </Button>}
+    </div>
+    {(packing.isError || installation.isError) &&
+      <p className={styles.error}>{describeError(packing.error ?? installation.error)}</p>}
+  </section>;
 }
 
 // ============================================================

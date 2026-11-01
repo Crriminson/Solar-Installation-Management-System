@@ -5,6 +5,9 @@
   it: it submits and shows what came back, naming the job the technician
   is already on. Guessing here would mean holding a copy of everyone's
   diary in the browser and getting it wrong.
+
+  Booking an order's installation books the job its confirmation already
+  opened, so this never creates a second one.
 */
 
 import { useState } from "react";
@@ -18,14 +21,9 @@ import PageHeader from "../../components/PageHeader";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import { dateTimeInputToIso, nowForDateTimeInput } from "../../lib/format";
 import { createJob } from "./api";
+import CrewFields from "./crew_fields";
 import { JOB_KINDS } from "./status";
 import styles from "./scheduling.module.css";
-
-interface StaffRow {
-  id: number;
-  name: string;
-  roles: string[];
-}
 
 interface SiteRow {
   id: number;
@@ -46,12 +44,6 @@ export default function JobCreate() {
   const [notes, setNotes] = useState("");
   const [crew, setCrew] = useState<string[]>([""]);
 
-  /* The staff picker returns everyone; filtering to technicians here is
-     a convenience. The server still refuses anyone who is not one. */
-  const staff = useQuery({
-    queryKey: ["staff"],
-    queryFn: () => apiGet<StaffRow[]>("staff/"),
-  });
   const sites = useQuery({
     queryKey: ["sites"],
     queryFn: () => apiGet<SiteRow[]>("sites/"),
@@ -70,14 +62,9 @@ export default function JobCreate() {
     onSuccess: (job) => navigate(`/schedule/${job.id}`),
   });
 
-  if (staff.isPending || sites.isPending) return <LoadingMessage label="Loading…" />;
-  if (staff.isError) return <ErrorMessage error={staff.error} onRetry={staff.refetch} />;
+  if (sites.isPending) return <LoadingMessage label="Loading…" />;
   if (sites.isError) return <ErrorMessage error={sites.error} onRetry={sites.refetch} />;
 
-  const technicians = staff.data.filter(
-    (person) => person.roles.includes("technician")
-      || person.roles.includes("operations_manager"),
-  );
   const ready = site !== "" && crew.some(Boolean);
 
   return <>
@@ -101,21 +88,7 @@ export default function JobCreate() {
         onChange={setEndsAt} />
 
       <h2>Crew</h2>
-      {crew.map((member, index) => <SelectField key={index}
-        label={index === 0 ? "Lead technician" : `Technician ${index + 1}`}
-        value={member}
-        options={[{ value: "", label: "Choose somebody" },
-          ...technicians.map((person) => ({
-            value: String(person.id), label: person.name,
-          }))]}
-        onChange={(value) => setCrew(crew.map(
-          (existing, position) => position === index ? value : existing))} />)}
-
-      <div className={styles.actions}>
-        <Button type="button" onClick={() => setCrew([...crew, ""])}>Add technician</Button>
-        {crew.length > 1 && <Button type="button"
-          onClick={() => setCrew(crew.slice(0, -1))}>Remove last</Button>}
-      </div>
+      <CrewFields crew={crew} onChange={setCrew} />
 
       <TextAreaField label="Notes for the crew" value={notes} onChange={setNotes} />
 

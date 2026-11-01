@@ -33,12 +33,21 @@ from .models import (SERVICE_INVOICE_KINDS, Allocation, Invoice, InvoiceKind, Or
 @transaction.atomic
 def confirm_order(quotation_id, actor):
     """
-    Turns an accepted quotation into an order.
+    Turns an accepted quotation into an order, and hands it on.
+
+    Spec.md F07: confirming creates the order, the warehouse requirement
+    and the installation awaiting scheduling, so the order reaches the
+    warehouse and Operations without anyone remembering to send it. The
+    order is the project record; there is no separate one.
 
     Confirming twice is safe: the one-to-one means the second call finds
     the existing order and returns it rather than billing the customer
-    for a second job.
+    for a second job, and the hand-offs are made only with the order.
     """
+    # Imported here: both apps already import this one's models.
+    from apps.fulfilment.services import prepare_for_order
+    from apps.scheduling.services import open_installation_job
+
     get_user_model().objects.select_for_update().get(pk=actor.pk)
 
     quotation = (QuoteRevision.objects
@@ -81,22 +90,48 @@ def confirm_order(quotation_id, actor):
     # has to remember to raise it.
     first_kind = InvoiceKind.ADVANCE if plan == PaymentPlan.ADVANCE else InvoiceKind.FULL
     issue_invoice(order, first_kind, advance, actor)
+
+    # Stock is reserved now rather than when the money clears, so the
+    # warehouse meets the order ready to pack or blocked (spec.md F09).
+    # Dispatch is still held until the money has cleared.
+    prepare_for_order(order, actor)
+    open_installation_job(order, actor)
     return order
 
 
 @transaction.atomic
 def cancel_order(order_id, data, actor):
-    """Cancels an order. Money already taken is returned as a refund, not erased."""
+    """
+    Cancels an order. Money already taken is returned as a refund, not erased.
+
+    Its reserved stock goes back on the shelf and its installation is
+    called off, in the same transaction, so a cancelled order never holds
+    an inverter another customer is waiting for. Once the goods have left
+    the warehouse, getting them back is a return, so it is refused.
+    """
+    from apps.fulfilment.models import FulfilmentStatus
+    from apps.fulfilment.services import release_for_cancelled_order
+    from apps.scheduling.services import cancel_installation_for_order
+
     order = _locked_order(order_id)
     check_revision(order, data)
 
     if order.status == OrderStatus.CANCELLED:
         raise ValidationError({"status": ["This order is already cancelled."]})
+    fulfilment = getattr(order, "fulfilment", None)
+    if order.status != OrderStatus.CONFIRMED or (fulfilment is not None and fulfilment.status in (
+            FulfilmentStatus.DISPATCHED, FulfilmentStatus.DELIVERED)):
+        raise ValidationError({"status": [
+            "The goods have left the warehouse, so this order can no longer be cancelled."
+        ]})
     if not data.get("reason", "").strip():
         raise ValidationError({"reason": ["Say why the order is being cancelled."]})
 
+    reason = data["reason"].strip()
+    release_for_cancelled_order(order, actor, reason)
+    cancel_installation_for_order(order, actor, reason)
     _update_order(order, actor, "cancelled", reason=data["reason"],
-                  status=OrderStatus.CANCELLED, cancelled_reason=data["reason"].strip())
+                  status=OrderStatus.CANCELLED, cancelled_reason=reason)
     return order
 
 

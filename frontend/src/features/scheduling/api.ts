@@ -16,6 +16,18 @@ export function createJob(data: Record<string, unknown>) {
   return apiPost<Job>("jobs/create/", data);
 }
 
+/* Gives a job awaiting scheduling its slot and its crew, together. */
+export function scheduleJob(job: Job, data: {
+  starts_at: string; ends_at: string; technicians: number[]; notes: string;
+}) {
+  return apiPost<Job>(`jobs/${job.id}/schedule/`, { revision: job.revision, ...data });
+}
+
+/* An installation job for an order confirmed before confirmation made one. */
+export function openInstallationJob(orderId: number) {
+  return apiPost<Job>("jobs/open-installation/", { order: orderId });
+}
+
 export function rescheduleJob(job: Job, data: {
   starts_at: string; ends_at: string; reason: string;
 }) {

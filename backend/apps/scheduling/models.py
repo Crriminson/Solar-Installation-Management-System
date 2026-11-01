@@ -9,6 +9,12 @@ Two rules shape everything here. A technician cannot be in two places
 at once, so overlapping active assignments are rejected. And a job that
 moves keeps its history, because "when was this originally booked for"
 is the first question asked when a customer complains about a delay.
+
+Confirming an order creates its installation job before anyone has
+picked a date (spec.md F07). That job waits with no slot and no crew
+rather than an invented appointment; the database holds both halves of
+that rule, so a waiting job can never carry a time and a booked one can
+never lack one.
 """
 
 from django.conf import settings
@@ -27,6 +33,7 @@ class JobKind(models.TextChoices):
 
 
 class JobStatus(models.TextChoices):
+    AWAITING_SCHEDULING = "awaiting_scheduling", "Awaiting scheduling"
     SCHEDULED = "scheduled", "Scheduled"
     IN_PROGRESS = "in_progress", "In progress"
     AWAITING_ACCEPTANCE = "awaiting_acceptance", "Awaiting customer acceptance"
@@ -35,6 +42,8 @@ class JobStatus(models.TextChoices):
 
 
 ALLOWED_JOB_MOVES = {
+    # Booking is the only way on: a waiting job cannot be started.
+    JobStatus.AWAITING_SCHEDULING: [JobStatus.SCHEDULED, JobStatus.CANCELLED],
     JobStatus.SCHEDULED: [JobStatus.IN_PROGRESS, JobStatus.CANCELLED],
     JobStatus.IN_PROGRESS: [JobStatus.AWAITING_ACCEPTANCE, JobStatus.CANCELLED],
     # Acceptance is F11's to record, and a refusal sends the crew back.
@@ -43,7 +52,8 @@ ALLOWED_JOB_MOVES = {
     JobStatus.CANCELLED: [],
 }
 
-# A technician booked in one of these is not free for another job.
+# A technician booked in one of these is not free for another job. A job
+# awaiting scheduling has no slot and no crew, so it holds nobody.
 ACTIVE_STATUSES = [JobStatus.SCHEDULED, JobStatus.IN_PROGRESS,
                    JobStatus.AWAITING_ACCEPTANCE]
 
@@ -79,8 +89,9 @@ class Job(models.Model):
         related_name="jobs",
     )
 
-    starts_at = models.DateTimeField()
-    ends_at = models.DateTimeField()
+    # Empty only while the job awaits scheduling; see the constraint below.
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(blank=True)
 
     # Delays are recorded against somebody, so a blocked job has an owner
@@ -111,10 +122,31 @@ class Job(models.Model):
                 condition=~models.Q(blocked_reason="") | models.Q(blocked_owner__isnull=True),
                 name="blocked_job_has_an_owner",
             ),
+            # No invented dates: a waiting job has no slot, and every other
+            # job has a whole one. A job cancelled before it was ever booked
+            # keeps having none.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status__in=[JobStatus.AWAITING_SCHEDULING, JobStatus.CANCELLED],
+                             starts_at__isnull=True, ends_at__isnull=True)
+                    | (~models.Q(status=JobStatus.AWAITING_SCHEDULING)
+                       & models.Q(starts_at__isnull=False, ends_at__isnull=False))
+                ),
+                name="job_has_a_slot_unless_awaiting_scheduling",
+            ),
+            # Spec.md F07: one installation per order. A cancelled one is
+            # history, so a replacement may follow it.
+            models.UniqueConstraint(
+                fields=["order"],
+                condition=(models.Q(kind=JobKind.INSTALLATION)
+                           & ~models.Q(status=JobStatus.CANCELLED)),
+                name="one_open_installation_per_order",
+            ),
         ]
 
     def __str__(self):
-        return f"{self.get_kind_display()} at {self.site} on {self.starts_at:%Y-%m-%d}"
+        when = f"{self.starts_at:%Y-%m-%d}" if self.starts_at else "not yet booked"
+        return f"{self.get_kind_display()} at {self.site}, {when}"
 
     def delete(self, *args, **kwargs):
         raise ValidationError("Jobs are cancelled, never deleted.")

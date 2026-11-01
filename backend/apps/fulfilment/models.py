@@ -39,17 +39,23 @@ class FulfilmentStatus(models.TextChoices):
     DISPATCHED = "dispatched", "Dispatched"
     DELIVERED = "delivered", "Delivered"
     BLOCKED = "blocked", "Blocked - short of stock"
+    CANCELLED = "cancelled", "Cancelled"
 
 
 # Which states may follow which. Blocked is reachable from Pending only:
 # once stock is held, a shortage is somebody else's order's problem.
+# Cancelled follows a cancelled order, and only while the goods are still
+# in the warehouse: after dispatch, getting them back is a return.
 ALLOWED_FULFILMENT_MOVES = {
-    FulfilmentStatus.PENDING: [FulfilmentStatus.RESERVED, FulfilmentStatus.BLOCKED],
-    FulfilmentStatus.BLOCKED: [FulfilmentStatus.RESERVED],
-    FulfilmentStatus.RESERVED: [FulfilmentStatus.PACKED, FulfilmentStatus.PENDING],
-    FulfilmentStatus.PACKED: [FulfilmentStatus.DISPATCHED],
+    FulfilmentStatus.PENDING: [FulfilmentStatus.RESERVED, FulfilmentStatus.BLOCKED,
+                               FulfilmentStatus.CANCELLED],
+    FulfilmentStatus.BLOCKED: [FulfilmentStatus.RESERVED, FulfilmentStatus.CANCELLED],
+    FulfilmentStatus.RESERVED: [FulfilmentStatus.PACKED, FulfilmentStatus.PENDING,
+                                FulfilmentStatus.CANCELLED],
+    FulfilmentStatus.PACKED: [FulfilmentStatus.DISPATCHED, FulfilmentStatus.CANCELLED],
     FulfilmentStatus.DISPATCHED: [FulfilmentStatus.DELIVERED],
     FulfilmentStatus.DELIVERED: [],
+    FulfilmentStatus.CANCELLED: [],
 }
 
 

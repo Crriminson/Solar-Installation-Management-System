@@ -10,4 +10,6 @@ export const FULFILMENT_STATUSES: Record<string, StatusInfo> = {
   delivered: { label: "Delivered", tone: "done" },
   // Red: nobody else will clear a shortage on its own.
   blocked: { label: "Short of stock", tone: "blocked" },
+  // The order was cancelled and its stock went back on the shelf.
+  cancelled: { label: "Cancelled", tone: "closed" },
 };

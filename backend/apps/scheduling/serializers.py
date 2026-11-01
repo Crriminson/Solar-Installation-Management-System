@@ -35,6 +35,19 @@ class RescheduleSerializer(RevisionSerializer):
     ends_at = serializers.DateTimeField()
 
 
+class ScheduleSerializer(RescheduleSerializer):
+    """Booking a job that awaits scheduling: its slot and crew together."""
+
+    notes = serializers.CharField(max_length=3000, required=False, allow_blank=True)
+    technicians = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), allow_empty=False
+    )
+
+
+class OrderReferenceSerializer(serializers.Serializer):
+    order = serializers.IntegerField(min_value=1)
+
+
 class BlockSerializer(RevisionSerializer):
     owner = serializers.IntegerField(min_value=1)
 

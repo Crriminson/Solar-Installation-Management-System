@@ -103,13 +103,38 @@ class OrderSerializer(serializers.ModelSerializer):
     advance_cleared = serializers.BooleanField(read_only=True)
     dispatch_allowed = serializers.BooleanField(read_only=True)
 
+    # Where the order has got to after confirmation, so nobody has to go
+    # looking for it in the warehouse or the diary.
+    fulfilment = serializers.SerializerMethodField()
+    installation = serializers.SerializerMethodField()
+
     class Meta:
         model = Order
         fields = ["id", "reference", "status", "quotation", "quotation_reference",
                   "customer", "customer_name", "site", "payment_plan", "gross_payable",
                   "advance_payable", "balance_due_on", "cleared_total", "outstanding",
                   "advance_cleared", "dispatch_allowed", "cancelled_reason",
-                  "confirmed_at", "revision", "invoices", "payments"]
+                  "confirmed_at", "revision", "invoices", "payments",
+                  "fulfilment", "installation"]
+
+    def get_fulfilment(self, order):
+        fulfilment = getattr(order, "fulfilment", None)
+        if fulfilment is None:
+            return None
+        return {"id": fulfilment.id, "status": fulfilment.status,
+                "blocked_reason": fulfilment.blocked_reason}
+
+    def get_installation(self, order):
+        # Prefetched by orders_with_money(); a single order may come without.
+        jobs = getattr(order, "installation_jobs", None)
+        if jobs is None:
+            from apps.scheduling.services import open_installation
+            job = open_installation(order)
+        else:
+            job = jobs[0] if jobs else None
+        if job is None:
+            return None
+        return {"id": job.id, "status": job.status, "starts_at": job.starts_at}
 
     def get_cleared_total(self, order):
         return order.cleared_total()

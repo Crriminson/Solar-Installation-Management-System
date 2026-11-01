@@ -5,6 +5,9 @@
   shown by role. Rescheduling asks for a reason before it will submit,
   because the previous slot is kept and an unexplained move is the thing
   nobody can answer for later.
+
+  An installation opened by confirming its order waits here with no date
+  and no crew until Operations books it. Booking sets both together.
 */
 
 import { useState } from "react";
@@ -18,11 +21,14 @@ import { TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
-import { dateTimeForInput, dateTimeInputToIso, formatDateTime } from "../../lib/format";
+import { useToast } from "../../components/ToastContext";
+import { dateTimeForInput, dateTimeInputToIso, formatDateTime,
+         nowForDateTimeInput } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
 import TimeSection from "../costing/time_section";
 import { openReport } from "../installations/api";
-import { cancelJob, fetchJob, rescheduleJob, startJob } from "./api";
+import { cancelJob, fetchJob, rescheduleJob, scheduleJob, startJob } from "./api";
+import CrewFields from "./crew_fields";
 import { JOB_KINDS, JOB_STATUSES } from "./status";
 import type { Job } from "./types";
 import styles from "./scheduling.module.css";
@@ -47,11 +53,14 @@ function JobDetails({ job }: { job: Job }) {
   const [moving, setMoving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState("");
-  const [startsAt, setStartsAt] = useState(dateTimeForInput(job.starts_at));
-  const [endsAt, setEndsAt] = useState(dateTimeForInput(job.ends_at));
+  const [startsAt, setStartsAt] = useState(
+    job.starts_at ? dateTimeForInput(job.starts_at) : nowForDateTimeInput());
+  const [endsAt, setEndsAt] = useState(
+    job.ends_at ? dateTimeForInput(job.ends_at) : nowForDateTimeInput());
 
   const canSchedule = hasRole(user, "operations_manager");
   const onSite = job.status === "in_progress";
+  const waiting = job.status === "awaiting_scheduling";
 
   const starting = useMutation({ mutationFn: () => startJob(job), onSuccess: refresh });
   const moveMutation = useMutation({
@@ -82,8 +91,10 @@ function JobDetails({ job }: { job: Job }) {
     <section className={styles.section}>
       <h2>The visit</h2>
       <dl className={styles.facts}>
-        <dt>Starts</dt><dd>{formatDateTime(job.starts_at)}</dd>
-        <dt>Ends</dt><dd>{formatDateTime(job.ends_at)}</dd>
+        {job.starts_at && job.ends_at
+          ? <><dt>Starts</dt><dd>{formatDateTime(job.starts_at)}</dd>
+              <dt>Ends</dt><dd>{formatDateTime(job.ends_at)}</dd></>
+          : <><dt>When</dt><dd>Not booked yet</dd></>}
         <dt>Crew</dt>
         <dd>{job.assignments.map((person) =>
           `${person.technician_name || person.username}${person.is_lead ? " (lead)" : ""}`
@@ -105,7 +116,7 @@ function JobDetails({ job }: { job: Job }) {
           disabled={report.isPending}>Record the installation</Button>}
 
       {canSchedule && job.status !== "completed" && job.status !== "cancelled" && <>
-        <Button onClick={() => setMoving(true)}>Reschedule</Button>
+        {!waiting && <Button onClick={() => setMoving(true)}>Reschedule</Button>}
         <Button onClick={() => setCancelling(true)}>Cancel visit</Button>
       </>}
 
@@ -114,6 +125,8 @@ function JobDetails({ job }: { job: Job }) {
 
     {(starting.isError || report.isError) &&
       <p className={styles.error}>{describeError(starting.error ?? report.error)}</p>}
+
+    {waiting && canSchedule && <BookingForm job={job} onBooked={refresh} />}
 
     <TimeSection jobId={job.id} crew={job.assignments.map((row) => row.technician)} />
 
@@ -154,4 +167,49 @@ function JobDetails({ job }: { job: Job }) {
         onChange={setReason} />
     </ConfirmDialog>}
   </>;
+}
+
+
+// ============================================================
+// Booking a job that awaits scheduling
+// ============================================================
+
+/* The slot and the crew go up together: a refused technician leaves the
+   job waiting exactly as it was, and the typed values stay. */
+function BookingForm({ job, onBooked }: { job: Job; onBooked: () => void }) {
+  const [startsAt, setStartsAt] = useState(nowForDateTimeInput());
+  const [endsAt, setEndsAt] = useState(nowForDateTimeInput());
+  const [crew, setCrew] = useState<string[]>([""]);
+  const [notes, setNotes] = useState(job.notes);
+  const confirm = useToast();
+
+  const booking = useMutation({
+    mutationFn: () => scheduleJob(job, {
+      starts_at: dateTimeInputToIso(startsAt),
+      ends_at: dateTimeInputToIso(endsAt),
+      technicians: crew.filter(Boolean).map(Number),
+      notes,
+    }),
+    onSuccess: (booked) => {
+      confirm(`${JOB_KINDS[booked.kind] ?? "Visit"} booked for ${formatDateTime(booked.starts_at ?? "")}`);
+      onBooked();
+    },
+  });
+
+  return <section className={styles.section}>
+    <h2>Book this visit</h2>
+    <div className={styles.form}>
+      <TextField label="Starts" type="datetime-local" required value={startsAt}
+        onChange={setStartsAt} />
+      <TextField label="Ends" type="datetime-local" required value={endsAt}
+        onChange={setEndsAt} />
+      <CrewFields crew={crew} onChange={setCrew} />
+      <TextAreaField label="Notes for the crew" value={notes} onChange={setNotes} />
+      {booking.isError && <p className={styles.error}>{describeError(booking.error)}</p>}
+      <Button variant="primary" loading={booking.isPending}
+        disabled={!crew.some(Boolean)} onClick={() => booking.mutate()}>
+        Book the visit
+      </Button>
+    </div>
+  </section>;
 }

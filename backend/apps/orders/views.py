@@ -15,7 +15,7 @@ Recording money is Finance's job, not Sales'. Confirming the order is
 Sales', because it follows their acceptance.
 """
 
-from django.db.models import Q
+from django.db.models import Prefetch, Q
 from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -50,9 +50,15 @@ class MoneyAccess(StaffAccess):
 
 
 def orders_with_money():
+    from apps.scheduling.models import Job, JobKind, JobStatus
+
+    installations = Job.objects.filter(kind=JobKind.INSTALLATION).exclude(
+        status=JobStatus.CANCELLED)
     return (Order.objects
-            .select_related("quotation__quote", "customer", "site")
-            .prefetch_related("invoices", "payments__allocations__invoice"))
+            .select_related("quotation__quote", "customer", "site", "fulfilment")
+            .prefetch_related("invoices", "payments__allocations__invoice",
+                              Prefetch("jobs", queryset=installations,
+                                       to_attr="installation_jobs")))
 
 
 class OrderListView(generics.ListAPIView):
@@ -88,7 +94,7 @@ class OrderConfirmView(APIView):
         serializer = ConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         order = confirm_order(serializer.validated_data["quotation"], request.user)
-        return Response(OrderSerializer(order).data, status=201)
+        return Response(OrderSerializer(orders_with_money().get(pk=order.pk)).data, status=201)
 
 
 class OrderCancelView(APIView):
@@ -97,8 +103,8 @@ class OrderCancelView(APIView):
     def post(self, request, pk):
         serializer = RevisionSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        order = cancel_order(pk, serializer.validated_data, request.user)
-        return Response(OrderSerializer(order).data)
+        cancel_order(pk, serializer.validated_data, request.user)
+        return Response(OrderSerializer(orders_with_money().get(pk=pk)).data)
 
 
 class BalanceInvoiceView(APIView):

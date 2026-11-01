@@ -31,7 +31,12 @@ User = get_user_model()
 
 @transaction.atomic
 def create_job(data, actor):
-    """Books a visit and staffs it, refusing any technician already out."""
+    """
+    Books a visit and staffs it, refusing any technician already out.
+
+    An order's installation already exists from the moment the order was
+    confirmed, so booking one books that job rather than adding a second.
+    """
     site = Site.objects.filter(pk=data["site"]).first()
     if site is None:
         raise ValidationError({"site": ["No site with that id."]})
@@ -44,6 +49,16 @@ def create_job(data, actor):
         order = Order.objects.filter(pk=data["order"]).first()
         if order is None:
             raise ValidationError({"order": ["No order with that id."]})
+
+    if order is not None and data["kind"] == JobKind.INSTALLATION:
+        existing = open_installation(order)
+        if existing is not None and existing.status == JobStatus.AWAITING_SCHEDULING:
+            return schedule_job(existing.pk, {**data, "revision": existing.revision}, actor)
+        if existing is not None:
+            raise ValidationError({"order": [
+                f"{order.reference} already has installation job {existing.pk}. "
+                "Reschedule that one instead."
+            ]})
 
     job = Job.objects.create(
         kind=data["kind"],
@@ -63,6 +78,76 @@ def create_job(data, actor):
     record_event(job, "scheduled", actor,
                  after={"kind": job.kind, "starts_at": str(job.starts_at)})
     return job
+
+
+def open_installation(order):
+    """The order's installation job, unless it was cancelled."""
+    return (Job.objects.filter(order=order, kind=JobKind.INSTALLATION)
+            .exclude(status=JobStatus.CANCELLED).first())
+
+
+def open_installation_job(order, actor):
+    """
+    Gives an order its installation job, awaiting a date and a crew.
+
+    Called inside order confirmation, and by Operations for an order
+    confirmed before confirmation did this. Calling again returns the job
+    already there; the database refuses a second one regardless.
+    """
+    existing = open_installation(order)
+    if existing is not None:
+        return existing
+
+    job = Job.objects.create(
+        kind=JobKind.INSTALLATION, status=JobStatus.AWAITING_SCHEDULING,
+        site=order.site, order=order, created_by=actor,
+    )
+    record_event(job, "awaiting_scheduling", actor, after={"order": order.reference})
+    return job
+
+
+@transaction.atomic
+def schedule_job(job_id, data, actor):
+    """
+    Books a job that is waiting for a date: its slot and its crew together.
+
+    Both or neither, in one transaction, so a booking refused for a busy
+    technician leaves the job waiting exactly as it was.
+    """
+    job = _locked_job(job_id)
+    check_revision(job, data)
+    _require_move(job, JobStatus.SCHEDULED)
+
+    if data["ends_at"] <= data["starts_at"]:
+        raise ValidationError({"ends_at": ["A job has to end after it starts."]})
+    if not data.get("technicians"):
+        raise ValidationError({"technicians": ["Choose at least one technician."]})
+
+    _update(job, actor, "scheduled", status=JobStatus.SCHEDULED,
+            starts_at=data["starts_at"], ends_at=data["ends_at"],
+            notes=data.get("notes", job.notes).strip())
+    for index, technician_id in enumerate(data["technicians"]):
+        assign_technician(job, technician_id, actor, is_lead=(index == 0))
+    return job
+
+
+def cancel_installation_for_order(order, actor, reason):
+    """
+    Calls off an order's installation when the order is cancelled.
+
+    Only one that has not started: a started installation means delivered
+    materials, and a delivered order is not cancelled.
+    """
+    job = open_installation(order)
+    if job is None:
+        return
+    job = _locked_job(job.pk)
+    if job.status not in (JobStatus.AWAITING_SCHEDULING, JobStatus.SCHEDULED):
+        raise ValidationError({"status": [
+            f"Installation job {job.pk} is already {job.get_status_display().lower()}."
+        ]})
+    _update(job, actor, "cancelled", reason=reason,
+            status=JobStatus.CANCELLED, cancelled_reason=reason)
 
 
 def assign_technician(job, technician_id, actor, *, is_lead=False):
@@ -121,6 +206,9 @@ def reschedule_job(job_id, data, actor):
         raise ValidationError(
             {"status": [f"A {job.get_status_display().lower()} job is not rescheduled."]}
         )
+    # There is no slot to keep in the history yet: book it instead.
+    if job.status == JobStatus.AWAITING_SCHEDULING:
+        raise ValidationError({"status": ["This job has no date yet. Book it instead."]})
     if not data.get("reason", "").strip():
         raise ValidationError({"reason": ["Say why the job is moving."]})
     if data["ends_at"] <= data["starts_at"]:

@@ -59,4 +59,7 @@ export interface Order {
   revision: number;
   invoices: Invoice[];
   payments: Payment[];
+  /* Where the order went on confirmation: the warehouse and the diary. */
+  fulfilment: { id: number; status: string; blocked_reason: string } | null;
+  installation: { id: number; status: string; starts_at: string | null } | null;
 }
