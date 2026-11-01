@@ -4,6 +4,12 @@ import { apiGet, apiPost } from "../../api/client";
 import type { Paginated } from "../enquiries/types";
 import type { BatchLot, PurchaseOrder, SerializedUnit, StockMovement, Supplier } from "./types";
 
+/* The printable barcode labels for a purchase order's or an order's goods. */
+export function stockLabelsUrl(target: { purchase_order: number } | { order: number }) {
+  return `/api/v1/stock/labels/?${new URLSearchParams(
+    Object.entries(target).map(([key, value]) => [key, String(value)]))}`;
+}
+
 export function fetchSuppliers(params: URLSearchParams) {
   return apiGet<Paginated<Supplier>>(`suppliers/?${params}`);
 }

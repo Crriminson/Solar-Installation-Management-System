@@ -10,6 +10,8 @@ Purchasing and stock endpoints (F08).
     GET      /api/v1/stock/units/                 serialized units
     GET      /api/v1/stock/lots/                  batch lots
     GET      /api/v1/stock/movements/             the full stock history
+    GET      /api/v1/stock/labels/?purchase_order= barcode labels as received
+    GET      /api/v1/stock/labels/?order=          barcode labels for an order's goods
 
 Purchasing is the warehouse's and the operations manager's. Costs are
 visible here, so Sales is not given access (D039).
@@ -17,14 +19,20 @@ visible here, so Sales is not given access (D039).
 
 from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import Role
 from apps.catalogue.models import Product
 from apps.core.api import StaffAccess
+from apps.orders.models import Order
 
+from .labels import labels_for_order, labels_for_purchase, labels_pdf
 from .models import (BatchLot, PurchaseOrder, PurchaseOrderLine, SerializedUnit,
                      StockMovement, Supplier)
 from .serializers import (BatchLotSerializer, GoodsReceiptSerializer,
@@ -223,3 +231,36 @@ class StockMovementListView(generics.ListAPIView):
         if params.get("order"):
             queryset = queryset.filter(order_id=params["order"])
         return queryset
+
+
+class StockLabelsView(APIView):
+    """
+    Barcode labels for the goods on one purchase order or one customer order.
+
+    By purchase order: every unit and batch as it was received, for
+    labelling stock when it arrives. By order: what is held for that
+    customer, for the packing bench. One of the two is required, so a
+    request never prints the whole warehouse.
+    """
+
+    permission_classes = [WarehouseAccess]
+
+    def get(self, request):
+        purchase_id = request.query_params.get("purchase_order")
+        order_id = request.query_params.get("order")
+        if bool(purchase_id) == bool(order_id):
+            raise ValidationError({"detail": ["Choose a purchase order or an order to label."]})
+
+        target_id = serializers.IntegerField(min_value=1).run_validation(purchase_id or order_id)
+
+        if purchase_id:
+            purchase = get_object_or_404(PurchaseOrder, pk=target_id)
+            labels, name = labels_for_purchase(purchase), purchase.reference
+        else:
+            order = get_object_or_404(Order, pk=target_id)
+            labels, name = labels_for_order(order), order.reference
+
+        response = HttpResponse(labels_pdf(labels, f"Stock labels {name}"),
+                                content_type="application/pdf")
+        response["Content-Disposition"] = f'attachment; filename="labels-{name}.pdf"'
+        return response

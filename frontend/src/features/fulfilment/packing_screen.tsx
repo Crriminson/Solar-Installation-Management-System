@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 
 import { describeError } from "../../api/client";
-import Button from "../../components/Button";
+import Button, { ButtonLink } from "../../components/Button";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
@@ -34,7 +34,8 @@ import { closePacking, dispatchOrder, fetchFulfilment, recordDelivery, reserveSt
 import { FULFILMENT_STATUSES } from "./status";
 import type { Fulfilment, PackingLine } from "./types";
 import styles from "./fulfilment.module.css";
-import { BlockedIcon, ConfirmIcon, ICON_SIZE } from "../../design/icons";
+import { BlockedIcon, ConfirmIcon, ICON_SIZE, PdfIcon } from "../../design/icons";
+import { stockLabelsUrl } from "../inventory/api";
 
 export default function PackingScreen() {
   const { fulfilmentId = "" } = useParams();
@@ -74,7 +75,11 @@ function Bench({ fulfilment }: { fulfilment: Fulfilment }) {
     <PageHeader back={{ to: "/packing", label: "Packing" }}
       title={<Reference>{fulfilment.order_reference}</Reference>}
       subtitle={fulfilment.customer_name}
-      status={<StatusBadge status={FULFILMENT_STATUSES[fulfilment.status]} />} />
+      status={<StatusBadge status={FULFILMENT_STATUSES[fulfilment.status]} />}
+      actions={(fulfilment.status === "reserved" || fulfilment.status === "packed") &&
+        /* The barcodes of exactly what is held for this order, for the bench. */
+        <ButtonLink to={stockLabelsUrl({ order: fulfilment.order })} reloadDocument
+          icon={<PdfIcon aria-hidden />}>Print labels</ButtonLink>} />
 
     {fulfilment.status === "blocked" &&
       <p className={styles.blocked}>{fulfilment.blocked_reason}</p>}

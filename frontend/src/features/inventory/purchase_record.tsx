@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 
 import { describeError } from "../../api/client";
-import Button from "../../components/Button";
+import Button, { ButtonLink } from "../../components/Button";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import DataTable, { type Column } from "../../components/DataTable";
 import { TextAreaField, TextField } from "../../components/Field";
@@ -22,9 +22,10 @@ import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
 import { businessToday, formatDate, formatMoney, formatQuantity } from "../../lib/format";
+import { PdfIcon } from "../../design/icons";
 import SupplierPayments from "../costing/supplier_payments";
 import { cancelPurchaseOrder, fetchPurchaseOrder, placePurchaseOrder, receiveGoods,
-         type ReceiptLine } from "./api";
+         stockLabelsUrl, type ReceiptLine } from "./api";
 import { PURCHASE_STATUSES } from "./status";
 import type { PurchaseLine, PurchaseOrder } from "./types";
 import styles from "./inventory.module.css";
@@ -83,7 +84,11 @@ function PurchaseDetails({ purchase }: { purchase: PurchaseOrder }) {
     <PageHeader back={{ to: "/purchasing", label: "Purchase orders" }}
       title={<Reference>{purchase.reference}</Reference>}
       subtitle={purchase.supplier_name}
-      status={<StatusBadge status={PURCHASE_STATUSES[purchase.status]} />} />
+      status={<StatusBadge status={PURCHASE_STATUSES[purchase.status]} />}
+      actions={(purchase.status === "received" || purchase.status === "part_received") &&
+        /* Barcodes to stick on the goods as they arrive, four to a page. */
+        <ButtonLink to={stockLabelsUrl({ purchase_order: purchase.id })} reloadDocument
+          icon={<PdfIcon aria-hidden />}>Print labels</ButtonLink>} />
 
     <section className={styles.section}>
       <h2>Supplier and invoice</h2>

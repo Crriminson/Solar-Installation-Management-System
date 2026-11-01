@@ -142,8 +142,8 @@ class CustomerDetailView(APIView):
         )
         return [
             {"id": order.pk, "reference": order.reference, "status": order.status,
-             "gross": str(order.gross_payable_incl_tax),
-             "outstanding": str(order.outstanding),
+             "gross": str(order.gross_payable),
+             "outstanding": str(order.outstanding()),
              "created_at": order.created_at}
             for order in orders
         ]

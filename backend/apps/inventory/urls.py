@@ -4,8 +4,8 @@ from django.urls import path
 
 from .views import (BatchLotListView, PurchaseOrderCancelView, PurchaseOrderCreateView,
                     PurchaseOrderDetailView, PurchaseOrderListView, PurchaseOrderPlaceView,
-                    PurchaseOrderReceiveView, SerializedUnitListView, StockMovementListView,
-                    SupplierDetailView, SupplierListView)
+                    PurchaseOrderReceiveView, SerializedUnitListView, StockLabelsView,
+                    StockMovementListView, SupplierDetailView, SupplierListView)
 
 urlpatterns = [
     path("suppliers/", SupplierListView.as_view(), name="supplier-list"),
@@ -21,4 +21,5 @@ urlpatterns = [
     path("stock/units/", SerializedUnitListView.as_view(), name="stock-units"),
     path("stock/lots/", BatchLotListView.as_view(), name="stock-lots"),
     path("stock/movements/", StockMovementListView.as_view(), name="stock-movements"),
+    path("stock/labels/", StockLabelsView.as_view(), name="stock-labels"),
 ]
