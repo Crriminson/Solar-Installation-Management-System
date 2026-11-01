@@ -13,6 +13,7 @@
 import type { Icon } from "@phosphor-icons/react";
 
 import {
+  AssistantIcon,
   DashboardIcon,
   EnquiryIcon,
   FinanceIcon,
@@ -175,6 +176,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         icon: PackageTemplateIcon,
         roles: ["sales", "operations_manager", "director"],
       },
+    ],
+  },
+  {
+    title: "Help",
+    items: [
+      { label: "Assistant", to: "/assistant", icon: AssistantIcon, roles: [] },
     ],
   },
 ];

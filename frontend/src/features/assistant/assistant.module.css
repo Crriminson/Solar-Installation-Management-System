@@ -1,0 +1,171 @@
+/* The staff assistant, on the shared operational tokens. */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 760px;
+  min-height: 240px;
+  padding-bottom: var(--space-3);
+}
+
+.muted {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.problem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 760px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-2h) var(--space-3);
+  border: 1px solid var(--tone-blocked-text);
+  border-radius: var(--radius);
+  color: var(--tone-blocked-text);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+}
+
+
+/* ============================================================
+   Starting questions
+   ============================================================ */
+
+.starters ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.starter {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-2h);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.starter:hover {
+  background: var(--color-surface-hover);
+}
+
+
+/* ============================================================
+   Messages
+   ============================================================ */
+
+.question {
+  align-self: flex-end;
+  max-width: 85%;
+  margin: 0;
+  padding: var(--space-2) var(--space-2h);
+  border-radius: var(--radius);
+  background: var(--color-primary-soft);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.answer {
+  max-width: 100%;
+  padding: var(--space-2h) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.failed {
+  border-color: var(--tone-blocked-text);
+  color: var(--tone-blocked-text);
+}
+
+/* Stops the newest words landing behind the sticky question box. */
+.end {
+  scroll-margin-bottom: 200px;
+}
+
+.answerText {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.waiting {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.sources {
+  margin-top: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.sources summary {
+  cursor: pointer;
+}
+
+.sources ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  padding-left: var(--space-3);
+}
+
+.sources a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+
+/* ============================================================
+   Asking
+   --sticky-bottom clears the phone's bottom bar, and is unset on a desk.
+   ============================================================ */
+
+.composer {
+  position: sticky;
+  bottom: var(--sticky-bottom, 0);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  max-width: 760px;
+  padding-block: var(--space-2);
+  background: var(--color-background);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.input:disabled {
+  background: var(--color-surface-sunken);
+}
+
+.caption {
+  max-width: 760px;
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}

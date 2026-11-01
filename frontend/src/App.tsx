@@ -49,6 +49,7 @@ import TicketRecord from "./features/support/ticket_record";
 import TechnicianPay from "./features/costing/technician_pay";
 import DashboardPage from "./features/dashboard/dashboard_page";
 import MetricPage from "./features/dashboard/metric_page";
+import AssistantPage from "./features/assistant/assistant_page";
 
 export default function App() {
   return (
@@ -89,6 +90,7 @@ export default function App() {
         <Route path="/technician-pay" element={<TechnicianPay />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/dashboard/:metricKey" element={<MetricPage />} />
+        <Route path="/assistant" element={<AssistantPage />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
         <Route path="/customers" element={<CustomerList />} />
         <Route path="/customers/:customerId" element={<CustomerRecord />} />

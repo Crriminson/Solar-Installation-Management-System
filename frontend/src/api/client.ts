@@ -69,6 +69,32 @@ export async function apiRequest<T>(
   return body as T;
 }
 
+/*
+  Posts and hands back the open response, for a reply that arrives in
+  pieces. Only a refusal is read here; the caller reads the rest.
+*/
+export async function apiStream(path: string, data: unknown, signal: AbortSignal) {
+  const csrfToken = readCookie("csrftoken");
+
+  const response = await fetch(`${API_BASE}/${path}`, {
+    method: "POST",
+    body: JSON.stringify(data),
+    signal,
+    credentials: "same-origin",
+    headers: {
+      "Content-Type": "application/json",
+      ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(response.status, "Request failed", body);
+  }
+
+  return response;
+}
+
 /* Convenience wrappers so screens read clearly. */
 
 export function apiGet<T>(path: string) {

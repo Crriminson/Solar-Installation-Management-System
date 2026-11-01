@@ -63,6 +63,8 @@ export {
   ArrowsClockwise as RetryIcon,
   PaperPlaneTilt as SendIcon,
   ChatCircle as ChatIcon,
+  ChatCircleDots as AssistantIcon,
+  Stop as StopIcon,
   CircleNotch as SpinnerIcon,
 
   /* Status and meaning */
