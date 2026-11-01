@@ -376,3 +376,26 @@ class EnquiryStatusChangeSerializer(serializers.Serializer):
         max_length=200, required=False, allow_blank=True, default=""
     )
     next_action_due = serializers.DateField(required=False, allow_null=True)
+
+# ============================================================
+# The customer as a whole (F01)
+# ============================================================
+
+class CustomerListSerializer(serializers.ModelSerializer):
+    """
+    One row in the customer list.
+
+    Carries the counts a person scans for rather than the records
+    themselves, so the list stays one query.
+    """
+
+    site_count = serializers.IntegerField(read_only=True)
+    enquiry_count = serializers.IntegerField(read_only=True)
+    order_count = serializers.IntegerField(read_only=True)
+    city = serializers.CharField(read_only=True, default="")
+
+    class Meta:
+        model = Customer
+        fields = ["id", "full_name", "phone", "email", "customer_type",
+                  "city", "site_count", "enquiry_count", "order_count",
+                  "created_at"]

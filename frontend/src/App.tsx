@@ -8,6 +8,8 @@
 import { Routes, Route } from "react-router-dom";
 
 import NotFound from "./components/NotFound";
+import CustomerList from "./features/customers/customer_list";
+import CustomerRecord from "./features/customers/customer_record";
 import InboxPage from "./features/messaging/inbox_page";
 import PublicLinkPage from "./features/messaging/public_link";
 import LoginPage from "./features/auth/LoginPage";
@@ -88,6 +90,8 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/dashboard/:metricKey" element={<MetricPage />} />
         <Route path="/surveys/:surveyId/edit/:revisionId" element={<SurveyStepForm />} />
+        <Route path="/customers" element={<CustomerList />} />
+        <Route path="/customers/:customerId" element={<CustomerRecord />} />
         <Route path="/enquiries" element={<SalesQueue />} />
         <Route path="/enquiries/new" element={<EnquiryForm staff />} />
         <Route path="/surveys" element={<SurveyList />} />

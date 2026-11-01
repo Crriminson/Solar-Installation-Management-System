@@ -2,6 +2,7 @@
 
 from django.urls import path
 
+from .customer_views import CustomerDetailView, CustomerListView
 from .views import (
     ContactLogListCreateView,
     EnquiryAssignView,
@@ -17,6 +18,8 @@ from .views import (
 
 urlpatterns = [
     # F10 needs somewhere to send a crew.
+    path("customers/", CustomerListView.as_view(), name="customer-list"),
+    path("customers/<int:pk>/", CustomerDetailView.as_view(), name="customer-detail"),
     path("sites/", SiteListView.as_view(), name="site-list"),
     path("enquiries/<int:pk>/duplicate-review/", DuplicateReviewView.as_view(), name="enquiry-duplicate-review"),
     path("enquiries/<int:pk>/activity/", EnquiryActivityView.as_view(), name="enquiry-activity"),

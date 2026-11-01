@@ -21,6 +21,7 @@ import {
   PackageTemplateIcon,
   PackingIcon,
   ChatIcon,
+  CustomerIcon,
   ProductIcon,
   PurchasingIcon,
   QuotationIcon,
@@ -64,6 +65,12 @@ export const NAV_SECTIONS: readonly NavSection[] = [
         to: "/quotations",
         icon: QuotationIcon,
         roles: ["sales", "operations_manager", "director"],
+      },
+      {
+        label: "Customers",
+        to: "/customers",
+        icon: CustomerIcon,
+        roles: ["sales", "operations_manager", "support", "finance", "director"],
       },
       {
         label: "Enquiries",
