@@ -259,7 +259,7 @@ def request_fingerprint(action, pk, data):
     return content_hash({"action": action, "pk": pk, **decided})
 
 
-def accept_quote(quotation, data, actor):
+def accept_quote(quotation, data, actor, channel=AcceptanceChannel.SUPERVISED):
     """
     Records the customer's signature and takes the quotation to Accepted.
 
@@ -267,6 +267,12 @@ def accept_quote(quotation, data, actor):
     document must still hash to what was issued: the customer signs what
     is on the screen, so if the document moved underneath, the signature
     would be evidence of nothing.
+
+    Supervised signing happens in front of a staff member, who is the
+    witness. A remote signature over Telegram (F16) has no witness, so
+    `actor` is None and the verified chat binding plus the single-use
+    token stand in its place. Both produce the same record and carry the
+    same weight (spec.md F06).
     """
     if quotation.status != QuoteStatus.ISSUED or quotation.valid_until < business_date():
         raise ValidationError({"status": ["Only a current Issued quotation can be accepted."]})
@@ -277,7 +283,7 @@ def accept_quote(quotation, data, actor):
 
     Acceptance.objects.create(
         quotation=quotation,
-        channel=AcceptanceChannel.SUPERVISED,
+        channel=channel,
         customer_name=data["customer_name"],
         signature=data["signature"],
         document_content_hash=quotation.content_hash,

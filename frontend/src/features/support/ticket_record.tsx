@@ -23,6 +23,7 @@ import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
+import { RequestConfirmationButton } from "../messaging/telegram_actions";
 import { useToast } from "../../components/ToastContext";
 import { dateTimeInputToIso, formatDate, formatDateTime, formatMoney, formatQuantity,
          nowForDateTimeInput } from "../../lib/format";
@@ -205,7 +206,9 @@ function TicketDetails({ ticket }: { ticket: Ticket }) {
     <PageHeader back={{ to: "/tickets", label: "Support" }}
       title={<Reference>{ticket.reference}</Reference>}
       subtitle={`${ticket.customer_name}${ticket.customer_phone ? ` · ${ticket.customer_phone}` : ""}`}
-      status={<StatusBadge status={TICKET_STATUSES[ticket.status]} />} />
+      status={<StatusBadge status={TICKET_STATUSES[ticket.status]} />}
+      actions={ticket.status === "awaiting_confirmation" &&
+        <RequestConfirmationButton ticketId={ticket.id} />} />
 
     {ticket.is_blocked && <p className={styles.blocked}>Blocked: {ticket.blocked_reason}</p>}
 

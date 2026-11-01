@@ -27,6 +27,8 @@ import {
 import Pagination from "../../components/Pagination";
 import Reference from "../../components/Reference";
 import SidePanel from "../../components/SidePanel";
+import Step from "../../components/Step";
+import { TelegramLink } from "../messaging/telegram_actions";
 import StatusBadge from "../../components/StatusBadge";
 import StatusPath from "../../components/StatusPath";
 import { ENQUIRY_STATUSES } from "../../components/status";
@@ -106,6 +108,7 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
 
   const { customer } = enquiry.site;
   const isOpen = enquiry.status !== "lost";
+  const next = nextStep(enquiry);
 
   return (
     <SidePanel label={`Enquiry ${enquiry.reference}`} onClose={onClose}>
@@ -128,8 +131,18 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
       )}
 
       <Details enquiry={enquiry} />
-      {isOpen && canWrite && <CompleteDetails enquiry={enquiry} onDone={refreshEverything} />}
-      {canWrite && enquiry.is_possible_duplicate && <DuplicateReview enquiry={enquiry} onDone={refreshEverything} />}
+
+      {/*
+        One step open at a time. Four forms side by side asks the
+        person to work out which one they need; opening the one this
+        lead is actually waiting on answers that. Nothing is hidden -
+        every step is a click away.
+      */}
+      {canWrite && enquiry.is_possible_duplicate && (
+        <Step title="Review possible duplicate" openByDefault>
+          <DuplicateReview enquiry={enquiry} onDone={refreshEverything} />
+        </Step>
+      )}
       {enquiry.duplicate_review && <p>Duplicate review: {enquiry.duplicate_review}. {enquiry.duplicate_review_reason}</p>}
 
       {canWrite && SURVEY_READY_STATUSES.includes(enquiry.status) && (
@@ -138,15 +151,38 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
 
       {isOpen && canWrite && (
         <>
-          <OwnerForm enquiry={enquiry} onDone={refreshEverything} />
-          <LogContactForm enquiry={enquiry} onDone={refreshEverything} />
+          <Step
+            title="Owner and next action"
+            summary={ownerSummary(enquiry)}
+            done={Boolean(enquiry.owner)}
+            openByDefault={next === "owner"}
+          >
+            <OwnerForm enquiry={enquiry} onDone={refreshEverything} />
+          </Step>
+
+          <Step
+            title="Complete the details"
+            done={!detailsOutstanding(enquiry)}
+            openByDefault={next === "details"}
+          >
+            <CompleteDetails enquiry={enquiry} onDone={refreshEverything} />
+          </Step>
+
+          <Step title="Record a contact">
+            <LogContactForm enquiry={enquiry} onDone={refreshEverything} />
+          </Step>
+
           {/* Background refreshes keep typed input and its original edit revision. */}
-          <ChangeStatusForm
-            enquiry={enquiry}
-            onDone={refreshEverything}
-          />
+          <Step title="Move this lead on" openByDefault={next === "status"}>
+            <ChangeStatusForm enquiry={enquiry} onDone={refreshEverything} />
+          </Step>
         </>
       )}
+
+      {/* Linking the customer's chat. A bot cannot open a conversation
+          with someone, so the customer has to start it: staff issue a
+          code and send them the link that carries it. */}
+      {canWrite && <TelegramLink customerId={customer.id} />}
 
       <ContactHistory enquiryId={enquiry.id} />
       <ActivityTimeline endpoint={`enquiries/${enquiry.id}/activity/`} revision={enquiry.revision} />
@@ -158,6 +194,30 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
 // ============================================================
 // What this enquiry is
 // ============================================================
+
+/*
+  Which step this lead is actually waiting on.
+
+  Ownership first, because a lead with no owner and no next action is
+  the one thing F02 refuses to leave alone. Then the facts a quotation
+  will need, then the conversation, then the move.
+*/
+function nextStep(enquiry: EnquiryListItem) {
+  if (!enquiry.owner || !enquiry.next_action) return "owner";
+  if (detailsOutstanding(enquiry)) return "details";
+  return "status";
+}
+
+/* The electricity facts a quotation will need, which intake does not
+   ask for (F01: an enquiry is worth more than a complete form). */
+function detailsOutstanding(enquiry: EnquiryListItem) {
+  return !enquiry.monthly_bill_amount && !enquiry.monthly_consumption_kwh;
+}
+
+function ownerSummary(enquiry: EnquiryListItem) {
+  if (!enquiry.owner) return "Nobody owns this lead yet";
+  return enquiry.next_action ? `${enquiry.owner_name}: ${enquiry.next_action}` : enquiry.owner_name;
+}
 
 function Details({ enquiry }: { enquiry: EnquiryListItem }) {
   const { site } = enquiry;

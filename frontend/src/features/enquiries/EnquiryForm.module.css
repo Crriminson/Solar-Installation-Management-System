@@ -184,3 +184,46 @@
     margin-bottom: 0;
   }
 }
+
+/*
+  Linking Telegram from the confirmation screen.
+
+  Offered, never required: the customer has just given us a phone
+  number and we will call them either way.
+*/
+.telegram {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  background: var(--tone-active-bg);
+  border: 1px solid var(--tone-active-border);
+  border-radius: var(--radius-lg);
+}
+
+.telegramTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.telegramLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height-field);
+  margin-top: var(--space-3);
+  padding: 0 var(--space-4);
+  font-weight: var(--weight-semibold);
+  color: var(--color-on-primary);
+  text-decoration: none;
+  background: var(--color-primary);
+  border-radius: var(--radius);
+}
+
+.telegramLink:hover {
+  background: var(--color-primary-hover);
+}
+
+.telegramNote {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

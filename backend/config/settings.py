@@ -48,6 +48,32 @@ TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "0"))
 
 
 # ============================================================
+# Telegram (F16)
+#
+# The token is a credential: it is read here and must never be logged,
+# echoed in an error, or written to an audit entry. With no token the
+# worker uses a fake transport, so the app runs and the tests pass on a
+# machine that has never spoken to Telegram.
+# ============================================================
+
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+TELEGRAM_BOT_USERNAME = os.getenv("TELEGRAM_BOT_USERNAME", "")
+
+# Where a customer's phone reaches this app, for links sent to them.
+PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "").rstrip("/")
+
+# How long a staff-issued linking token is good for, and how long a
+# signing or confirmation link lives before it stops working.
+TELEGRAM_LINK_TOKEN_MINUTES = int(os.getenv("TELEGRAM_LINK_TOKEN_MINUTES", "30"))
+CUSTOMER_LINK_HOURS = int(os.getenv("CUSTOMER_LINK_HOURS", "72"))
+
+# Outbox delivery: how many times to retry a message, and the base of
+# the backoff between attempts.
+OUTBOX_MAX_ATTEMPTS = int(os.getenv("OUTBOX_MAX_ATTEMPTS", "6"))
+OUTBOX_BACKOFF_SECONDS = int(os.getenv("OUTBOX_BACKOFF_SECONDS", "20"))
+
+
+# ============================================================
 # 2. Environment — differs per machine, comes from .env
 # ============================================================
 
@@ -85,6 +111,8 @@ OUR_APPS = [
     "apps.scheduling",
     "apps.installations",
     "apps.warranties",
+    "apps.documents",
+    "apps.messaging",
     "apps.support",
     "apps.costing",
     "apps.dashboard",

@@ -10,6 +10,9 @@
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   min-height: 100vh;
+  /* Where the work area begins. A floating window centres itself in
+     this, so it never sits over the navigation. */
+  --work-left: var(--sidebar-width);
 }
 
 
@@ -134,6 +137,7 @@
 
 .shellRailed {
   grid-template-columns: var(--sidebar-width-rail) minmax(0, 1fr);
+  --work-left: var(--sidebar-width-rail);
 }
 
 .shellRailed .linkLabel,
@@ -303,6 +307,7 @@
   .shell,
   .shellRailed {
     --sticky-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));
+    --work-left: 0px;
     grid-template-columns: minmax(0, 1fr);
     /* Keeps the last row of a page clear of the bar. */
     padding-bottom: calc(var(--phone-bar-height) + env(safe-area-inset-bottom, 0px));

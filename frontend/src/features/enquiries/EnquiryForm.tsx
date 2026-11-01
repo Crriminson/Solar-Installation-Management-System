@@ -326,7 +326,31 @@ function Confirmation({
           <ButtonLink variant="quiet" to="/enquiries">Back to enquiries</ButtonLink>
         </div>
       ) : (
-        <p>Our team will call you shortly to discuss your roof.</p>
+        <>
+          <p>Our team will call you shortly to discuss your roof.</p>
+
+          {/*
+            Linking Telegram now, to the record this submission just
+            created. A bot cannot open a chat with someone, so the
+            customer has to start it - tapping this does that and
+            carries the code with it, in one step.
+          */}
+          {saved.telegram_link && (
+            <div className={styles.telegram}>
+              <h2 className={styles.telegramTitle}>Get your quotation on Telegram</h2>
+              <p>
+                Tap below and press Start. We will send your quotation,
+                documents and visit updates straight to your chat.
+              </p>
+              <a className={styles.telegramLink} href={saved.telegram_link}>
+                Open Telegram
+              </a>
+              <p className={styles.telegramNote}>
+                Optional. We will call you either way.
+              </p>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

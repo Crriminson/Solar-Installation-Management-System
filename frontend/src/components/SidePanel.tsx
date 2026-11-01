@@ -1,8 +1,11 @@
 /*
-  A panel beside a list, for quick work without leaving it.
+  A floating window over the work area, for quick work without leaving
+  the list behind it.
 
-  Escape closes it and focus returns to the row that opened it, so
-  someone working by keyboard keeps their place.
+  It is centred in the content column rather than the viewport, so the
+  navigation stays visible and the person can still see where they are.
+  Escape closes it, clicking away closes it, and focus returns to the
+  row that opened it so someone working by keyboard keeps their place.
 */
 
 import { useEffect, useRef, type ReactNode } from "react";
@@ -45,16 +48,32 @@ export default function SidePanel({ label, onClose, children }: SidePanelProps) 
   }, []);
 
   return (
-    <aside ref={panel} className={styles.panel} aria-label={label} tabIndex={-1}>
-      <button
-        type="button"
-        className={styles.close}
-        aria-label="Close panel"
-        onClick={onClose}
+    <div
+      className={styles.scrim}
+      /* Clicking the dimmed area closes, but a click that started
+         inside the window and ended outside it must not. */
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <aside
+        ref={panel}
+        className={styles.panel}
+        role="dialog"
+        aria-modal="true"
+        aria-label={label}
+        tabIndex={-1}
       >
-        <CloseIcon size={ICON_SIZE.section} aria-hidden />
-      </button>
-      {children}
-    </aside>
+        <button
+          type="button"
+          className={styles.close}
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <CloseIcon size={ICON_SIZE.section} aria-hidden />
+        </button>
+        {children}
+      </aside>
+    </div>
   );
 }

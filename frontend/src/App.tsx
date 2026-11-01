@@ -8,6 +8,7 @@
 import { Routes, Route } from "react-router-dom";
 
 import NotFound from "./components/NotFound";
+import PublicLinkPage from "./features/messaging/public_link";
 import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
 import PackageList from "./features/catalogue/PackageList";
@@ -52,6 +53,11 @@ export default function App() {
       {/* Public: the enquiry form anyone can reach. */}
       <Route path="/" element={<EnquiryForm />} />
       <Route path="/login" element={<LoginPage />} />
+
+      {/* Opened from Telegram. No session: the token is the whole
+          authorisation, and the server decides what it is worth. */}
+      <Route path="/sign/:token" element={<PublicLinkPage />} />
+      <Route path="/confirm/:token" element={<PublicLinkPage />} />
 
       {/* Staff: inside the app frame, after signing in. */}
       <Route element={<RequireStaff />}>

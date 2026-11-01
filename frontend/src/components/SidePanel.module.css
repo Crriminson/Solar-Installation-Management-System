@@ -1,29 +1,38 @@
 /*
-  Side panel. Floats over the list, and fills the screen on a phone.
+  A floating window over the work area.
 
-  It slides in from the edge it is attached to, which is the one piece
-  of motion that says where it came from and where closing will send it.
+  It centres itself in the content column rather than the viewport, so
+  it never covers the navigation: the person can still see where they
+  are while they work in it. On a phone there is no navigation beside
+  it, so it fills the screen.
 */
 
-.panel {
+.scrim {
   position: fixed;
-  inset: 0 0 0 auto;
+  /* Starts where the work area starts. AppShell publishes this. */
+  inset: 0 0 0 var(--work-left, 0px);
   z-index: 20;
-  width: var(--panel-width);
-  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-4);
-  overflow-y: auto;
-  background: var(--color-surface);
-  border-left: 1px solid var(--color-border);
-  box-shadow: var(--shadow-float);
-  animation: slide-in var(--motion-settle) var(--ease-out);
+  background: var(--scrim);
+  animation: scrim-in var(--motion-fast) var(--ease-out);
 }
 
-@keyframes slide-in {
-  from {
-    transform: translateX(16px);
-    opacity: 0;
-  }
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(var(--panel-width), 100%);
+  max-height: min(820px, 100%);
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-float);
+  animation: window-in var(--motion-settle) var(--ease-out);
 }
 
 .panel:focus {
@@ -34,11 +43,11 @@
   position: absolute;
   top: var(--space-2);
   right: var(--space-2);
-  width: var(--control-height);
-  height: var(--control-height);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
   color: var(--color-text-muted);
   background: none;
   border: none;
@@ -51,17 +60,37 @@
 
 .close:hover {
   color: var(--color-text);
-}
-
-.close:hover {
   background: var(--color-surface-hover);
 }
 
+/* It arrives where it is, rather than sliding in from an edge it did
+   not come from. */
+@keyframes window-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(6px);
+  }
+}
+
+@keyframes scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 899px) {
+  .scrim {
+    padding: 0;
+    align-items: stretch;
+  }
+
   .panel {
     width: 100%;
+    max-height: none;
+    border: none;
+    border-radius: 0;
     padding: var(--space-3);
-    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
   }
 
   .close {

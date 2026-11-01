@@ -29,6 +29,8 @@ export interface EnquiryCreated {
   reference: string;
   message: string;
   id?: number;            // sent to signed-in staff only
+  /* Empty when no bot is configured. */
+  telegram_link: string;
 }
 
 /* One row in the sales queue. */

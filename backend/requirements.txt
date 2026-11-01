@@ -5,3 +5,5 @@ psycopg[binary]==3.2.*
 python-dotenv==1.*
 Pillow==11.*
 reportlab==4.*
+# Telegram Bot API client (spec.md section 3, F16).
+httpx==0.28.*

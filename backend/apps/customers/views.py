@@ -87,6 +87,9 @@ class EnquiryCreateView(generics.CreateAPIView):
         reply = {
             "reference": enquiry.reference,
             "message": "Enquiry received. Our team will contact you shortly.",
+            # F16: the customer can link Telegram now, to the record they
+            # just created. Empty when no bot is configured.
+            "telegram_link": getattr(serializer, "_telegram_link", ""),
         }
         # Staff go straight on to the record they saved. A visitor gets
         # the reference only, not an internal id.

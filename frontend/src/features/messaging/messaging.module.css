@@ -1,0 +1,78 @@
+/* Staff-side Telegram controls, on the shared tokens. */
+
+.section {
+  margin-block: var(--space-4);
+}
+
+.heading {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.muted {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-wrap: pretty;
+}
+
+.binding {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2h) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.revoke {
+  display: grid;
+  gap: var(--space-2);
+  margin-block: var(--space-3);
+  padding: var(--space-3);
+  background: var(--tone-blocked-bg);
+  border: 1px solid var(--tone-blocked-border);
+  border-radius: var(--radius);
+}
+
+/* Shown once and never again, so it is marked out as worth copying. */
+.code {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--tone-active-bg);
+  border: 1px solid var(--tone-active-border);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.error {
+  margin: var(--space-2) 0 0;
+  color: var(--tone-blocked-text);
+  font-size: var(--text-sm);
+}
+
+.inbox {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.message {
+  padding: var(--space-2h) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.who {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

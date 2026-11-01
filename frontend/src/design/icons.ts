@@ -61,6 +61,8 @@ export {
   Camera as CameraIcon,
   Signature as SignatureIcon,
   ArrowsClockwise as RetryIcon,
+  PaperPlaneTilt as SendIcon,
+  ChatCircle as ChatIcon,
   CircleNotch as SpinnerIcon,
 
   /* Status and meaning */

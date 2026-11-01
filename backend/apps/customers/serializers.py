@@ -269,6 +269,13 @@ class EnquiryCreateSerializer(EnquiryDetailsFields):
             possible_duplicate_of=existing_customer,
             **validated_data,
         )
+
+        # F16: the customer can link Telegram straight away, to the
+        # record this submission just created. Nothing is merged into an
+        # existing customer here, so the token can only ever reach what
+        # they typed themselves.
+        from apps.messaging.services import deep_link, issue_link_token
+        self._telegram_link = deep_link(issue_link_token(customer))
         # Public intake has an explicit next action even before a salesperson picks it up.
         from apps.core.api import business_date
         from apps.core.models import record_event

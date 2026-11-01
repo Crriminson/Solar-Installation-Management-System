@@ -1,0 +1,83 @@
+/* A folded step. Open, it is a plain section; folded, it is one row. */
+
+.step {
+  margin-bottom: var(--space-2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  transition: border-color var(--motion-fast) var(--ease-out);
+}
+
+.stepOpen {
+  border-color: var(--color-border-strong);
+  box-shadow: var(--shadow-raised);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2h);
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.head:hover {
+  background: var(--color-surface-hover);
+}
+
+/* A fixed slot, so a ticked step and an unticked one line up. */
+.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--tone-done-text);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-pill);
+}
+
+.titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+.title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.summary {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caret,
+.caretOpen {
+  flex: none;
+  color: var(--color-text-faint);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.caretOpen {
+  transform: rotate(180deg);
+}
+
+.body {
+  padding: 0 var(--space-3) var(--space-3);
+}

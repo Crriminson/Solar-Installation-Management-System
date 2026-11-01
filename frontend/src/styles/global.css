@@ -101,6 +101,61 @@ button:disabled {
 
 
 /* ============================================================
+   Scrollbars
+
+   The OS bar is a grey slab that cuts across a dark sidebar and a
+   tinted page alike. These are the same shape in both, and fade back
+   when nothing is being scrolled.
+   ============================================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border: 3px solid transparent;
+  border-radius: var(--radius-pill);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* On ink the same bar has to be lighter than its surface, not darker. */
+.on-ink *,
+.on-ink {
+  scrollbar-color: var(--color-ink-line) transparent;
+}
+
+.on-ink *::-webkit-scrollbar-thumb {
+  background: var(--color-ink-line);
+  background-clip: content-box;
+}
+
+.on-ink *::-webkit-scrollbar-thumb:hover {
+  background: var(--color-on-ink-muted);
+  background-clip: content-box;
+}
+
+
+/* ============================================================
    Motion
 
    Everything that moves must have a still version. Under reduced

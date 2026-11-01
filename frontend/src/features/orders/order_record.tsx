@@ -23,6 +23,7 @@ import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { ErrorMessage, LoadingRecord } from "../../components/StateMessage";
 import StatusBadge from "../../components/StatusBadge";
+import DocumentActions from "../documents/document_actions";
 import { useToast } from "../../components/ToastContext";
 import { businessToday, formatDate, formatDateTime, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
@@ -91,7 +92,11 @@ function OrderDetails({ order }: { order: Order }) {
     <PageHeader back={{ to: "/orders", label: "Orders" }}
       title={<Reference>{order.reference}</Reference>}
       subtitle={`${order.customer_name} · from ${order.quotation_reference}`}
-      actions={open && <ButtonLink to={`/quotations/${order.quotation}`}>View quotation</ButtonLink>}
+      actions={<>
+        {open && <ButtonLink to={`/quotations/${order.quotation}`}>View quotation</ButtonLink>}
+        {order.invoices[0] &&
+          <DocumentActions kind="invoice" recordId={order.invoices[0].id} label="Invoice PDF" />}
+      </>}
       status={<StatusBadge status={ORDER_STATUSES[order.status]} />} />
 
     <p className={order.dispatch_allowed ? styles.cleared : styles.waitingBanner}>
