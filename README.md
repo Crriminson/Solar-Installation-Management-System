@@ -149,6 +149,35 @@ For a faster PostgreSQL regression run, use
 `manage.py test --settings=config.test_settings`. This uses a test-only password
 hasher; the normal application settings remain unchanged.
 
+## Staff assistant
+
+**Assistant** in the navigation answers small questions on subsidies, wiring,
+faults, the solar market and how the company works, using a local
+[Ollama](https://ollama.com) model. The rest of the app runs normally without
+it, and the screen says when it is offline.
+
+```bash
+ollama pull qwen2.5:3b
+ollama pull nomic-embed-text
+cd backend
+.venv/Scripts/python manage.py migrate
+.venv/Scripts/python manage.py index_knowledge
+```
+
+The notes are in `backend/apps/assistant/knowledge/`, one topic per file and one
+answer per `## ` heading. To change what it knows, edit a note, set its `checked`
+date, and run `index_knowledge`. Run it again after changing the catalogue, the
+warranty policies or the subsidy rules, or after running `seed_demo`. Only what
+changed is embedded again.
+
+Keep restricted information out of the notes: every staff role can ask, so
+nothing here may be limited to some of them. Purchase costs, margins and customer
+records stay out (decisions.md D076).
+
+On a laptop CPU the model needs about 3 GB of free memory and answers in 2 to 20
+seconds. Change the models with `ASSISTANT_CHAT_MODEL` and
+`ASSISTANT_EMBED_MODEL` in `.env`.
+
 ## How we work
 
 One spec feature (F01–F20 in spec.md section 7) is the unit of work,

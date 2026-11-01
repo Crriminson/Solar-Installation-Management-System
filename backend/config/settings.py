@@ -74,6 +74,22 @@ OUTBOX_BACKOFF_SECONDS = int(os.getenv("OUTBOX_BACKOFF_SECONDS", "20"))
 
 
 # ============================================================
+# Staff assistant (F21)
+#
+# Answers run on a local Ollama server, so staff questions stay on this
+# machine. With it stopped the app runs normally and the assistant says
+# it is offline. Never point these at a "-cloud" model.
+# ============================================================
+
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+ASSISTANT_CHAT_MODEL = os.getenv("ASSISTANT_CHAT_MODEL", "qwen2.5:3b")
+ASSISTANT_EMBED_MODEL = os.getenv("ASSISTANT_EMBED_MODEL", "nomic-embed-text")
+
+# Questions per staff member. Every one occupies the one model.
+ASSISTANT_RATE = os.getenv("ASSISTANT_RATE", "20/minute")
+
+
+# ============================================================
 # 2. Environment — differs per machine, comes from .env
 # ============================================================
 
@@ -116,6 +132,7 @@ OUR_APPS = [
     "apps.support",
     "apps.costing",
     "apps.dashboard",
+    "apps.assistant",
 ]
 
 INSTALLED_APPS = [
@@ -152,6 +169,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "public_enquiry": PUBLIC_ENQUIRY_RATE,
         "login": LOGIN_RATE,
+        "assistant": ASSISTANT_RATE,
     },
     "NUM_PROXIES": TRUSTED_PROXY_COUNT,
 }

@@ -585,7 +585,8 @@ The patterns that make a tool look auto-generated, or get in the way:
 - Decorative trend arrows or sparklines with nothing behind them.
 - Fake precision such as "98.7% efficiency score", or a target the spec does
   not define.
-- AI wording or features. Spec §11 excludes them.
+- AI wording or features, outside the staff assistant (scope log 8). Spec §11
+  excludes the rest.
 
 ---
 

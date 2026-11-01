@@ -25,4 +25,5 @@ urlpatterns = [
     path("api/v1/", include("apps.support.urls")),     # F13
     path("api/v1/", include("apps.costing.urls")),     # F14
     path("api/v1/", include("apps.dashboard.urls")),   # F15
+    path("api/v1/", include("apps.assistant.urls")),   # F21
 ]
