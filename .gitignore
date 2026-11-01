@@ -26,3 +26,7 @@ frontend/dist/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local demo artefacts, kept on disk and out of the repo.
+demo_labels.pdf
+seed_demo.zip
