@@ -1,0 +1,38 @@
+seed_demo - builds a full demo of the Solar Ops lifecycle
+==========================================================
+
+1. Pull the latest main first (it needs commits 97c2caa, a2669c4 and 6cd833c),
+   then run:  .venv/Scripts/python.exe manage.py migrate
+
+2. Unzip this into the project folder so the files land at:
+     backend/apps/core/management/__init__.py
+     backend/apps/core/management/commands/__init__.py
+     backend/apps/core/management/commands/seed_demo.py
+     backend/apps/core/test_seed_demo.py      (the test, optional)
+
+3. Create an EMPTY PostgreSQL database named solar_demo
+   (same owner/password as your normal database), then in PowerShell:
+
+     cd backend
+     $env:POSTGRES_DB = "solar_demo"
+     .venv/Scripts/python.exe manage.py migrate
+     .venv/Scripts/python.exe manage.py seed_demo
+     .venv/Scripts/python.exe manage.py runserver
+
+   (Git Bash: export POSTGRES_DB=solar_demo instead of the $env line.)
+   Stop any other server on port 8000 first. To go back to your own data,
+   close that terminal or run: Remove-Item Env:POSTGRES_DB
+
+4. Sign in at http://localhost:5173 - every account's password is
+   demo-pass-123. demo_admin can see everything; director_sanjay sees the
+   dashboard. The command prints where each stage of the demo is waiting.
+
+Notes
+- It refuses to run on a database that already has enquiries, so it can
+  never mix demo customers into real data. To rebuild, drop and recreate
+  solar_demo.
+- Everything runs in one transaction: if it fails part-way, nothing is left.
+- In the demo database only, the dummy packages are taken live by the demo
+  administrator so quotations can be generated (seed_catalogue on its own
+  never activates a package).
+- Test it with: .venv/Scripts/python.exe manage.py test apps.core.test_seed_demo
