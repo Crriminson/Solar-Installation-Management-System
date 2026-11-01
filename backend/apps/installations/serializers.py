@@ -2,6 +2,7 @@
 
 from decimal import Decimal
 
+from django.urls import reverse
 from rest_framework import serializers
 
 from apps.customers.models import SystemType
@@ -107,9 +108,15 @@ class InstalledUnitReadSerializer(serializers.ModelSerializer):
 
 
 class PhotoReadSerializer(serializers.ModelSerializer):
+    url = serializers.SerializerMethodField()
+
     class Meta:
         model = InstallationPhoto
-        fields = ["id", "image", "caption", "uploaded_at"]
+        fields = ["id", "url", "caption", "uploaded_at"]
+
+    def get_url(self, photo) -> str:
+        """Goes through an authorized view. Uploads are never served directly."""
+        return reverse("installation-photo-file", args=[photo.id])
 
 
 class AcceptanceSerializer(serializers.ModelSerializer):

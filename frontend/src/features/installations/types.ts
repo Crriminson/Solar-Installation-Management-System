@@ -19,7 +19,7 @@ export interface InstalledUnit {
 
 export interface InstallationPhoto {
   id: number;
-  image: string;
+  url: string;            // an authorised download, never the storage path
   caption: string;
   uploaded_at: string;
 }

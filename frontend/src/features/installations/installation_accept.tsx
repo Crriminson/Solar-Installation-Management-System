@@ -106,7 +106,7 @@ function Handover({ report }: { report: InstallationReport }) {
         <h3>Photographs</h3>
         <ul className={styles.photoList}>
           {report.photos.map((photo) => <li key={photo.id}>
-            <img src={photo.image} alt={photo.caption} />
+            <img src={photo.url} alt={photo.caption} />
             <span>{photo.caption}</span>
           </li>)}
         </ul>
