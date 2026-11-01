@@ -13,7 +13,7 @@
 
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
@@ -24,6 +24,7 @@ import {
   TextAreaField,
   TextField,
 } from "../../components/Field";
+import Pagination from "../../components/Pagination";
 import Reference from "../../components/Reference";
 import SidePanel from "../../components/SidePanel";
 import StatusBadge from "../../components/StatusBadge";
@@ -586,9 +587,11 @@ function ChangeStatusForm({
 // ============================================================
 
 function ContactHistory({ enquiryId }: { enquiryId: number }) {
+  const [page, setPage] = useState(1);
   const { data, isPending, error, isError, refetch } = useQuery({
-    queryKey: ["contacts", enquiryId],
-    queryFn: () => fetchContactLog(enquiryId),
+    queryKey: ["contacts", enquiryId, page],
+    queryFn: () => fetchContactLog(enquiryId, page),
+    placeholderData: keepPreviousData,
   });
 
   return (
@@ -617,6 +620,7 @@ function ContactHistory({ enquiryId }: { enquiryId: number }) {
           </li>
         ))}
       </ul>
+      {data && <Pagination page={page} count={data.count} onChange={setPage} />}
     </section>
   );
 }

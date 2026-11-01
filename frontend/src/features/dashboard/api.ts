@@ -34,6 +34,7 @@ export interface MetricRows {
   caption: string;
   kind: MetricKind;
   period: string;
+  count: number;          // every row behind the figure; rows is one page of them
   rows: MetricRow[];
 }
 

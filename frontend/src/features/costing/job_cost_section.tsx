@@ -8,11 +8,12 @@
 */
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import DataTable, { type Column } from "../../components/DataTable";
+import Pagination from "../../components/Pagination";
 import { TextField } from "../../components/Field";
 import { ErrorMessage, LoadingMessage } from "../../components/StateMessage";
 import { businessToday, formatDate, formatMoney } from "../../lib/format";
@@ -59,9 +60,11 @@ function Expenses({ orderId, canMoveMoney, onChanged }: {
   const [amount, setAmount] = useState("");
   const [incurredOn, setIncurredOn] = useState(businessToday());
   const [reversing, setReversing] = useState<Expense | null>(null);
+  const [page, setPage] = useState(1);
 
   const expenses = useQuery({
-    queryKey: ["job-cost", orderId, "expenses"], queryFn: () => fetchExpenses(orderId),
+    queryKey: ["job-cost", orderId, "expenses", page], queryFn: () => fetchExpenses(orderId, page),
+    placeholderData: keepPreviousData,
   });
   const mutation = useMutation({
     mutationFn: () => recordExpense({
@@ -91,8 +94,11 @@ function Expenses({ orderId, canMoveMoney, onChanged }: {
   return <>
     <h2>Project expenses</h2>
     {expenses.data && expenses.data.count > 0
-      ? <DataTable caption="Project expenses" columns={columns} rows={expenses.data.results}
-          rowKey={(row) => row.id} />
+      ? <>
+          <DataTable caption="Project expenses" columns={columns} rows={expenses.data.results}
+            rowKey={(row) => row.id} />
+          <Pagination page={page} count={expenses.data.count} onChange={setPage} />
+        </>
       : <p className={styles.muted}>None recorded. Stock is costed when issued, not here.</p>}
 
     {canMoveMoney && <div className={styles.actions}>

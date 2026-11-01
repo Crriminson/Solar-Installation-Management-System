@@ -18,7 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.models import Role
-from apps.core.api import StaffAccess, exact_decimals
+from apps.core.api import BoundedPagination, StaffAccess, exact_decimals
 
 from .exports import metric_csv, summary_pdf
 from .metrics import METRICS, dashboard, filters_from
@@ -46,17 +46,25 @@ class DashboardView(APIView):
 
 
 class MetricRowsView(APIView):
-    """A number the director cannot trace is not trusted (spec.md F15)."""
+    """
+    A number the director cannot trace is not trusted (spec.md F15).
+
+    The rows come a page at a time, like every other list, so a year's
+    collections never arrive as one response. count is every row behind
+    the figure, which is what a count tile shows; the CSV holds them all.
+    """
 
     permission_classes = [DashboardAccess]
 
     def get(self, request, key):
         metric = _metric(key)
         filters = filters_from(request.query_params)
+        rows = metric.rows(filters)
+        page = BoundedPagination().paginate_queryset(rows, request, view=self)
         return Response(exact_decimals({
             "key": metric.key, "label": metric.label, "caption": metric.caption,
             "kind": metric.kind, "period": filters.description,
-            "rows": metric.rows(filters),
+            "count": len(rows), "rows": page,
         }))
 
 

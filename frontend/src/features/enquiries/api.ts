@@ -61,8 +61,9 @@ export function fetchStaff() {
   return apiGet<StaffMember[]>("staff/");
 }
 
-export function fetchContactLog(enquiryId: number) {
-  return apiGet<Paginated<ContactLogEntry>>(`enquiries/${enquiryId}/contacts/`);
+export function fetchContactLog(enquiryId: number, page = 1) {
+  const query = page > 1 ? `?page=${page}` : "";
+  return apiGet<Paginated<ContactLogEntry>>(`enquiries/${enquiryId}/contacts/${query}`);
 }
 
 export function recordContact(

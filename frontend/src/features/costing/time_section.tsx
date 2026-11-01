@@ -6,11 +6,12 @@
 */
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import DataTable, { type Column } from "../../components/DataTable";
+import Pagination from "../../components/Pagination";
 import { TextField } from "../../components/Field";
 import { ErrorMessage } from "../../components/StateMessage";
 import { businessToday, formatDate, formatMoney, formatQuantity } from "../../lib/format";
@@ -28,8 +29,12 @@ export default function TimeSection({ jobId, crew }: { jobId: number; crew: numb
   const [hours, setHours] = useState("");
   const [workDate, setWorkDate] = useState(businessToday());
   const [reversing, setReversing] = useState<TimeEntry | null>(null);
+  const [page, setPage] = useState(1);
 
-  const entries = useQuery({ queryKey, queryFn: () => fetchTime(jobId) });
+  const entries = useQuery({
+    queryKey: [...queryKey, page], queryFn: () => fetchTime(jobId, page),
+    placeholderData: keepPreviousData,
+  });
   const mutation = useMutation({
     mutationFn: () => recordTime({ job: jobId, hours, work_date: workDate }),
     onSuccess: () => { setHours(""); refresh(); },
@@ -66,8 +71,11 @@ export default function TimeSection({ jobId, crew }: { jobId: number; crew: numb
     <h2>Hours</h2>
     {entries.isError && <ErrorMessage error={entries.error} onRetry={entries.refetch} />}
     {entries.data && entries.data.count > 0
-      ? <DataTable caption="Hours on this job" columns={columns} rows={entries.data.results}
-          rowKey={(row) => row.id} />
+      ? <>
+          <DataTable caption="Hours on this job" columns={columns} rows={entries.data.results}
+            rowKey={(row) => row.id} />
+          <Pagination page={page} count={entries.data.count} onChange={setPage} />
+        </>
       : <p className={styles.muted}>No hours recorded yet.</p>}
 
     {onCrew && <div className={styles.actions}>

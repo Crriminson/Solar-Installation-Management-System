@@ -3,17 +3,20 @@
 
   A number the director cannot trace is not trusted. The headline is
   computed from these same rows on the server, and the CSV holds them
-  too, so screen, tile and export cannot disagree.
+  too, so screen, tile and export cannot disagree. The rows arrive a
+  page at a time; the page sits in the URL beside the filters.
 */
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { ButtonLink } from "../../components/Button";
 import DataTable, { type Column } from "../../components/DataTable";
 import PageHeader from "../../components/PageHeader";
+import Pagination from "../../components/Pagination";
 import Reference from "../../components/Reference";
 import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
+import { useListParams } from "../../components/useListParams";
 import { formatDate } from "../../lib/format";
 import { fetchMetric, metricCsvUrl, type MetricRow } from "./api";
 import { formatFigure } from "./figures";
@@ -24,11 +27,15 @@ export default function MetricPage() {
   const { metricKey = "" } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
+  const list = useListParams();
   const query = dashboardQuery(params);
+  const paged = new URLSearchParams(query);
+  if (list.page > 1) paged.set("page", String(list.page));
 
   const result = useQuery({
-    queryKey: ["dashboard-metric", metricKey, query.toString()],
-    queryFn: () => fetchMetric(metricKey, query),
+    queryKey: ["dashboard-metric", metricKey, paged.toString()],
+    queryFn: () => fetchMetric(metricKey, paged),
+    placeholderData: keepPreviousData,
   });
 
   if (result.isPending) return <LoadingMessage label="Loading the records…" />;
@@ -55,10 +62,13 @@ export default function MetricPage() {
       title={metric.label} subtitle={`${metric.caption} · ${metric.period}`}
       actions={<ButtonLink to={metricCsvUrl(metricKey, query)} reloadDocument icon={<CsvIcon aria-hidden />}>Export CSV</ButtonLink>} />
 
-    {metric.rows.length === 0
+    {metric.count === 0
       ? <EmptyMessage>Nothing behind this figure in this period.</EmptyMessage>
-      : <DataTable caption={metric.label} columns={columns} rows={metric.rows}
-          rowKey={(row) => `${row.url}-${row.reference}-${row.date}-${row.amount}`}
-          onRowClick={(row) => navigate(row.url)} />}
+      : <>
+          <DataTable caption={metric.label} columns={columns} rows={metric.rows}
+            rowKey={(row) => `${row.url}-${row.reference}-${row.date}-${row.amount}`}
+            onRowClick={(row) => navigate(row.url)} />
+          <Pagination page={list.page} count={metric.count} onChange={list.setPage} />
+        </>}
   </>;
 }

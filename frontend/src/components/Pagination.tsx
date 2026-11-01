@@ -8,7 +8,7 @@
 import Button from "./Button";
 import styles from "./Pagination.module.css";
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 interface PaginationProps {
   page: number;

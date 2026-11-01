@@ -26,6 +26,9 @@ interface DraftLine {
 
 const EMPTY_LINE: DraftLine = { product: "", quantity: "", unitCost: "" };
 
+/* MAX_PAGE_SIZE in the Django settings: the most one request may hold. */
+const PICKER_SIZE = 100;
+
 export default function PurchaseCreate() {
   const navigate = useNavigate();
   const [supplier, setSupplier] = useState("");
@@ -33,9 +36,13 @@ export default function PurchaseCreate() {
   const [invoiceReference, setInvoiceReference] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([{ ...EMPTY_LINE }]);
 
+  /* A drop-down cannot page, so it asks for the most the server allows
+     and says so if there are more, rather than silently dropping them. */
   const suppliers = useQuery({
-    queryKey: ["suppliers"],
-    queryFn: () => fetchSuppliers(new URLSearchParams({ active: "true" })),
+    queryKey: ["suppliers", "picker"],
+    queryFn: () => fetchSuppliers(new URLSearchParams({
+      active: "true", page_size: String(PICKER_SIZE),
+    })),
   });
   const products = useQuery({
     queryKey: ["product-choices"],
@@ -89,6 +96,9 @@ export default function PurchaseCreate() {
           ...suppliers.data.results.map((row) => ({
             value: String(row.id), label: row.name,
           }))]}
+        hint={suppliers.data.count > suppliers.data.results.length
+          ? `Showing the first ${suppliers.data.results.length} of ${suppliers.data.count} active suppliers.`
+          : undefined}
         onChange={setSupplier} />
       <TextField label="Expected delivery date" type="date" value={expectedOn}
         onChange={setExpectedOn} />

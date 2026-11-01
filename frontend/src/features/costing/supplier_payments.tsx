@@ -6,11 +6,12 @@
 */
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import DataTable, { type Column } from "../../components/DataTable";
+import Pagination from "../../components/Pagination";
 import { TextField } from "../../components/Field";
 import { businessToday, formatDate, formatMoney } from "../../lib/format";
 import { hasRole, useStaffUser } from "../auth/session";
@@ -36,10 +37,12 @@ export default function SupplierPayments({ purchaseId, hasInvoice }: {
   const [amount, setAmount] = useState("");
   const [paidOn, setPaidOn] = useState(businessToday());
   const [reversing, setReversing] = useState<SupplierPayment | null>(null);
+  const [page, setPage] = useState(1);
 
   const payments = useQuery({
-    queryKey: ["supplier-payments", purchaseId],
-    queryFn: () => fetchSupplierPayments(purchaseId),
+    queryKey: ["supplier-payments", purchaseId, page],
+    queryFn: () => fetchSupplierPayments(purchaseId, page),
+    placeholderData: keepPreviousData,
   });
   const invoice = useMutation({
     mutationFn: () => recordSupplierInvoice(purchaseId, reference, amount),
@@ -75,8 +78,11 @@ export default function SupplierPayments({ purchaseId, hasInvoice }: {
   return <section className={styles.section}>
     <h2>Supplier payments</h2>
     {payments.data && payments.data.count > 0
-      ? <DataTable caption="Supplier payments" columns={columns} rows={payments.data.results}
-          rowKey={(row) => row.id} />
+      ? <>
+          <DataTable caption="Supplier payments" columns={columns} rows={payments.data.results}
+            rowKey={(row) => row.id} />
+          <Pagination page={page} count={payments.data.count} onChange={setPage} />
+        </>
       : <p className={styles.muted}>Nothing paid yet.</p>}
 
     {canMoveMoney && <div className={styles.actions}>

@@ -11,6 +11,7 @@ from datetime import date, datetime, timedelta, timezone as utc
 from decimal import Decimal
 from unittest.mock import patch
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import SimpleTestCase, TestCase
@@ -136,6 +137,25 @@ class BoundaryTests(DashboardTestCase):
 # ============================================================
 
 class TraceabilityTests(DashboardTestCase):
+    def test_a_long_drill_down_comes_a_page_at_a_time_with_the_full_count(self):
+        """The tile counts every row; the screen pages through them."""
+        site = Enquiry.objects.get().site
+        for _ in range(30):
+            Enquiry.objects.create(site=site, source="phone")
+        chosen = {"period": "custom", "from": "2020-01-01", "to": str(business_date())}
+        tile = card(METRICS["new_enquiries"], filters(start=date(2020, 1, 1)))["value"]
+
+        first = self.get("dashboard-metric", "new_enquiries", **chosen).json()
+        self.assertEqual(first["count"], tile)
+        self.assertEqual(len(first["rows"]), settings.DEFAULT_PAGE_SIZE)
+
+        rows = list(first["rows"])
+        pages = -(-tile // settings.DEFAULT_PAGE_SIZE)
+        for page in range(2, pages + 1):
+            rows += self.get("dashboard-metric", "new_enquiries", page=page, **chosen).json()["rows"]
+        self.assertEqual(len(rows), tile)
+        self.assertEqual(len({row["reference"] for row in rows}), tile)
+
     def test_every_figure_can_be_opened(self):
         self.complete_the_job()
 

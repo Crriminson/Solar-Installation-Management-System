@@ -7,12 +7,13 @@
 */
 
 import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { describeError } from "../../api/client";
 import Button from "../../components/Button";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import DataTable, { type Column } from "../../components/DataTable";
+import Pagination from "../../components/Pagination";
 import { TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import { EmptyMessage, ErrorMessage, LoadingMessage } from "../../components/StateMessage";
@@ -32,12 +33,14 @@ export default function TechnicianPay() {
   const [paying, setPaying] = useState<TechnicianSummary | null>(null);
   const [rating, setRating] = useState<TechnicianSummary | null>(null);
   const [reversing, setReversing] = useState<TechnicianPayment | null>(null);
+  const [page, setPage] = useState(1);
 
   const summaries = useQuery({
     queryKey: ["technician-pay", "summaries"], queryFn: fetchTechnicianSummaries,
   });
   const payments = useQuery({
-    queryKey: ["technician-pay", "payments"], queryFn: fetchTechnicianPayments,
+    queryKey: ["technician-pay", "payments", page], queryFn: () => fetchTechnicianPayments(page),
+    placeholderData: keepPreviousData,
   });
 
   const columns: Column<TechnicianSummary>[] = [
@@ -98,8 +101,11 @@ export default function TechnicianPay() {
     <section className={styles.section}>
       <h2>Payments</h2>
       {payments.data && payments.data.count > 0
-        ? <DataTable caption="Payments" columns={paymentColumns} rows={payments.data.results}
-            rowKey={(row) => row.id} />
+        ? <>
+            <DataTable caption="Payments" columns={paymentColumns} rows={payments.data.results}
+              rowKey={(row) => row.id} />
+            <Pagination page={page} count={payments.data.count} onChange={setPage} />
+          </>
         : <p className={styles.muted}>Nothing paid yet.</p>}
     </section>
 

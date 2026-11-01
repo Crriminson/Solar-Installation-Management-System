@@ -31,7 +31,7 @@ ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png"]
 MAX_IMAGE_DIMENSION_PX = 8000                                # longest side
 MAX_PHOTOS_PER_RECORD = 20
 
-DEFAULT_PAGE_SIZE = 25                                       # rows per page
+DEFAULT_PAGE_SIZE = 10                                       # rows per page (scope log 7)
 MAX_PAGE_SIZE = 100                                          # hard ceiling
 
 # How often one anonymous client may submit the public enquiry form.

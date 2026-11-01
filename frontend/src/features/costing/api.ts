@@ -3,6 +3,12 @@
 import { apiGet, apiPost } from "../../api/client";
 import type { Paginated } from "../enquiries/types";
 
+/* A list URL for one page. Page one is the default and is left off. */
+function paged(path: string, page: number) {
+  if (page <= 1) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}page=${page}`;
+}
+
 export interface JobCost {
   order: number;
   reference: string;
@@ -87,8 +93,8 @@ export function setRate(data: Record<string, unknown>) {
   return apiPost<unknown>("costing/rates/", data);
 }
 
-export function fetchTime(jobId: number) {
-  return apiGet<Paginated<TimeEntry>>(`costing/time/?job=${jobId}`);
+export function fetchTime(jobId: number, page = 1) {
+  return apiGet<Paginated<TimeEntry>>(paged(`costing/time/?job=${jobId}`, page));
 }
 
 export function recordTime(data: Record<string, unknown>) {
@@ -99,8 +105,8 @@ export function reverseTime(id: number, reason: string) {
   return apiPost<TimeEntry>(`costing/time/${id}/reverse/`, { reason });
 }
 
-export function fetchTechnicianPayments() {
-  return apiGet<Paginated<TechnicianPayment>>("costing/technician-payments/");
+export function fetchTechnicianPayments(page = 1) {
+  return apiGet<Paginated<TechnicianPayment>>(paged("costing/technician-payments/", page));
 }
 
 export function payTechnician(data: Record<string, unknown>) {
@@ -111,8 +117,8 @@ export function reverseTechnicianPayment(id: number, reason: string) {
   return apiPost<TechnicianPayment>(`costing/technician-payments/${id}/reverse/`, { reason });
 }
 
-export function fetchExpenses(orderId: number) {
-  return apiGet<Paginated<Expense>>(`costing/expenses/?order=${orderId}`);
+export function fetchExpenses(orderId: number, page = 1) {
+  return apiGet<Paginated<Expense>>(paged(`costing/expenses/?order=${orderId}`, page));
 }
 
 export function recordExpense(data: Record<string, unknown>) {
@@ -123,8 +129,9 @@ export function reverseExpense(id: number, reason: string) {
   return apiPost<Expense>(`costing/expenses/${id}/reverse/`, { reason });
 }
 
-export function fetchSupplierPayments(purchaseId: number) {
-  return apiGet<Paginated<SupplierPayment>>(`costing/supplier-payments/?purchase_order=${purchaseId}`);
+export function fetchSupplierPayments(purchaseId: number, page = 1) {
+  return apiGet<Paginated<SupplierPayment>>(
+    paged(`costing/supplier-payments/?purchase_order=${purchaseId}`, page));
 }
 
 export function paySupplier(data: Record<string, unknown>) {
