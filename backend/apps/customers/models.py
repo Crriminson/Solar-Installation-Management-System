@@ -131,7 +131,7 @@ class Site(models.Model):
     address_line = models.CharField(max_length=255)
     city = models.CharField(max_length=100)
     state = models.CharField(max_length=60, choices=STATE_CHOICES)
-    pincode = models.CharField(max_length=10)
+    pincode = models.CharField(max_length=6)
     address_key = models.CharField(max_length=450, db_index=True, editable=False, default="")
 
     # Area with no shade for most of the day. Drives how many panels fit.

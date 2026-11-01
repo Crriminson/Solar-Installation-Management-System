@@ -108,7 +108,7 @@ class Migration(migrations.Migration):
                         max_length=60,
                     ),
                 ),
-                ("pincode", models.CharField(max_length=10)),
+                ("pincode", models.CharField(max_length=6)),
                 (
                     "shadow_free_roof_area_sqm",
                     models.DecimalField(
