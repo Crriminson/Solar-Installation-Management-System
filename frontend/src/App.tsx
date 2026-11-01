@@ -8,6 +8,7 @@
 import { Routes, Route } from "react-router-dom";
 
 import NotFound from "./components/NotFound";
+import InboxPage from "./features/messaging/inbox_page";
 import PublicLinkPage from "./features/messaging/public_link";
 import LoginPage from "./features/auth/LoginPage";
 import RequireStaff from "./features/auth/RequireStaff";
@@ -79,6 +80,7 @@ export default function App() {
         <Route path="/installations/:reportId" element={<InstallationForm />} />
         <Route path="/warranties" element={<WarrantyList />} />
         <Route path="/warranties/:warrantyId" element={<WarrantyRecord />} />
+        <Route path="/inbox" element={<InboxPage />} />
         <Route path="/tickets" element={<TicketList />} />
         <Route path="/tickets/new" element={<TicketNew />} />
         <Route path="/tickets/:ticketId" element={<TicketRecord />} />

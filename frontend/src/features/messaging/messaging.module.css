@@ -76,3 +76,9 @@
   font-size: var(--text-xs);
   color: var(--color-text-muted);
 }
+
+/* A chat we do not recognise. Shown, because somebody has to notice
+   it, but marked: nothing has been disclosed to it. */
+.unlinked {
+  color: var(--color-text-muted);
+}
