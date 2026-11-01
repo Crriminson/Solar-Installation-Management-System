@@ -83,7 +83,10 @@ export function apiPost<T>(path: string, data?: unknown) {
 }
 
 export function apiPatch<T>(path: string, data: unknown) {
-  return apiRequest<T>(path, { method: "PATCH", body: JSON.stringify(data) });
+  return apiRequest<T>(path, {
+    method: "PATCH",
+    body: data instanceof FormData ? data : JSON.stringify(data),
+  });
 }
 
 

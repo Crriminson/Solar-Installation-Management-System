@@ -49,6 +49,7 @@ import {
   recordContact,
   reviewDuplicate,
 } from "./api";
+import CompleteDetails from "./enquiry_details_form";
 import NextStep from "./NextStep";
 import type { EnquiryListItem, EnquiryStatus } from "./types";
 import styles from "./FollowUpPanel.module.css";
@@ -126,6 +127,7 @@ export default function FollowUpPanel({ enquiry, onClose }: Props) {
       )}
 
       <Details enquiry={enquiry} />
+      {isOpen && canWrite && <CompleteDetails enquiry={enquiry} onDone={refreshEverything} />}
       {canWrite && enquiry.is_possible_duplicate && <DuplicateReview enquiry={enquiry} onDone={refreshEverything} />}
       {enquiry.duplicate_review && <p>Duplicate review: {enquiry.duplicate_review}. {enquiry.duplicate_review_reason}</p>}
 

@@ -44,6 +44,11 @@ export function fetchEnquiries(filters: QueueFilters) {
   );
 }
 
+/* Fills in details found out after the enquiry arrived. May carry a bill. */
+export function updateEnquiryDetails(enquiryId: number, values: FormData) {
+  return apiPatch<EnquiryListItem>(`enquiries/${enquiryId}/details/`, values);
+}
+
 /* Where the browser fetches an enquiry's uploaded bill. */
 export function billDownloadUrl(enquiryId: number) {
   return `/api/v1/enquiries/${enquiryId}/bill/`;

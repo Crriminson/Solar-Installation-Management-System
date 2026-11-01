@@ -5,6 +5,7 @@ API endpoints for F01 and F02.
     GET  /api/v1/enquiries/                 staff, the sales queue
     GET  /api/v1/enquiries/<id>/bill/       staff, the uploaded bill
     PATCH /api/v1/enquiries/<id>/assign/    staff
+    PATCH /api/v1/enquiries/<id>/details/   staff, details known later
     POST /api/v1/enquiries/<id>/status/     staff
     GET, POST /api/v1/enquiries/<id>/contacts/   staff
 
@@ -33,11 +34,15 @@ from apps.core.serializers import AuditEventSerializer
 from .constants import NATIONAL_PHONE_DIGITS
 from .models import ContactLog, Enquiry, EnquirySource, OPEN_STATUSES, Site
 from .serializers import (
+    CUSTOMER_DETAIL_FIELDS,
+    SITE_DETAIL_FIELDS,
     ContactLogSerializer,
     EnquiryAssignSerializer,
     EnquiryCreateSerializer,
+    EnquiryDetailsSerializer,
     EnquiryListSerializer,
     EnquiryStatusChangeSerializer,
+    enquiry_detail,
 )
 
 
@@ -79,13 +84,15 @@ class EnquiryCreateView(generics.CreateAPIView):
         else:
             enquiry = serializer.save(source=EnquirySource.WEB_FORM)
 
-        return Response(
-            {
-                "reference": enquiry.reference,
-                "message": "Enquiry received. Our team will contact you shortly.",
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        reply = {
+            "reference": enquiry.reference,
+            "message": "Enquiry received. Our team will contact you shortly.",
+        }
+        # Staff go straight on to the record they saved. A visitor gets
+        # the reference only, not an internal id.
+        if request.user.is_authenticated:
+            reply["id"] = enquiry.id
+        return Response(reply, status=status.HTTP_201_CREATED)
 
 
 class EnquiryListView(generics.ListAPIView):
@@ -166,6 +173,88 @@ class EnquiryBillView(APIView):
         )
 
 
+def locked_open_enquiry(pk):
+    """
+    The enquiry, row-locked, or the response refusing it.
+
+    Locked so a revision compared here cannot change before the write.
+    Closed enquiries are history and are not changed.
+    """
+    enquiry = (Enquiry.objects.select_for_update()
+               .select_related("site__customer").filter(pk=pk).first())
+    if enquiry is None:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    if not enquiry.is_open:
+        return Response(
+            {"detail": "This enquiry is closed."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    return enquiry
+
+
+class EnquiryDetailsView(APIView):
+    """
+    PATCH /api/v1/enquiries/<id>/details/
+
+    Fills in or corrects what the customer did not know on the form:
+    usage, the bill, the roof area, email and property type. Only the
+    fields sent change. Must quote the revision on screen, and every
+    change is recorded with its old and new value.
+    """
+
+    permission_classes = [SalesAccess]
+
+    @transaction.atomic
+    def patch(self, request, pk):
+        enquiry = locked_open_enquiry(pk)
+        if isinstance(enquiry, Response):
+            return enquiry
+
+        serializer = EnquiryDetailsSerializer(
+            data=request.data, partial=True, context={"enquiry": enquiry}
+        )
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        check_revision(enquiry, data)
+
+        before, after = self._apply(enquiry, data)
+        if after:
+            enquiry.revision += 1
+            enquiry.save()
+            record_event(enquiry, "details_updated", request.user, before=before, after=after)
+
+        return Response(EnquiryListSerializer(enquiry).data)
+
+    def _apply(self, enquiry, data):
+        """Writes each changed field to its record; returns the change."""
+        customer, site = enquiry.site.customer, enquiry.site
+        before, after = {}, {}
+
+        bill = data.pop("electricity_bill", None)
+        if bill:
+            # The file itself is never copied into the history.
+            before["electricity_bill"] = bool(enquiry.electricity_bill)
+            after["electricity_bill"] = "uploaded"
+            enquiry.electricity_bill = bill
+
+        for field, value in data.items():
+            if field == "revision" or enquiry_detail(enquiry, field) == value:
+                continue
+            before[field] = str(enquiry_detail(enquiry, field))
+            after[field] = str(value)
+            target = (customer if field in CUSTOMER_DETAIL_FIELDS
+                      else site if field in SITE_DETAIL_FIELDS else enquiry)
+            setattr(target, field, value)
+
+        customer_changed = [field for field in CUSTOMER_DETAIL_FIELDS if field in after]
+        site_changed = [field for field in SITE_DETAIL_FIELDS if field in after]
+        if customer_changed:
+            customer.save(update_fields=[*customer_changed, "updated_at"])
+        if site_changed:
+            site.save(update_fields=[*site_changed, "updated_at"])
+        return before, after
+
+
 # ============================================================
 # Follow-up actions (F02)
 # ============================================================
@@ -183,7 +272,7 @@ class EnquiryAssignView(APIView):
 
     @transaction.atomic
     def patch(self, request, pk):
-        enquiry = self._get_open_enquiry(pk)
+        enquiry = locked_open_enquiry(pk)
         if isinstance(enquiry, Response):
             return enquiry
 
@@ -219,17 +308,6 @@ class EnquiryAssignView(APIView):
                             "next_action_due": str(enquiry.next_action_due)})
 
         return Response(EnquiryListSerializer(enquiry).data)
-
-    def _get_open_enquiry(self, pk):
-        enquiry = Enquiry.objects.select_for_update().filter(pk=pk).first()
-        if enquiry is None:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        if not enquiry.is_open:
-            return Response(
-                {"detail": "This enquiry is closed."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        return enquiry
 
 
 class EnquiryStatusView(APIView):

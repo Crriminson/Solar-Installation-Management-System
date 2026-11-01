@@ -28,6 +28,7 @@ export interface EnquiryFormValues {
 export interface EnquiryCreated {
   reference: string;
   message: string;
+  id?: number;            // sent to signed-in staff only
 }
 
 /* One row in the sales queue. */

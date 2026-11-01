@@ -1,0 +1,60 @@
+/* The optional detail groups. All values come from tokens.css. */
+
+.group {
+  margin-bottom: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* The whole bar is the control, so it is an easy target on a phone. */
+.summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--control-height-field);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.title {
+  font-weight: var(--weight-semibold);
+}
+
+.optional {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.description {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.caret {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.group[open] .caret {
+  transform: rotate(180deg);
+}
+
+.body {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Two columns on wide screens, one on narrow. */
+.grid {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}

@@ -7,6 +7,7 @@ from .views import (
     EnquiryAssignView,
     EnquiryBillView,
     EnquiryCreateView,
+    EnquiryDetailsView,
     EnquiryListView,
     EnquiryStatusView,
     DuplicateReviewView,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("enquiries/", EnquiryListView.as_view(), name="enquiry-list"),
     path("enquiries/submit/", EnquiryCreateView.as_view(), name="enquiry-create"),
     path("enquiries/<int:pk>/bill/", EnquiryBillView.as_view(), name="enquiry-bill"),
+    path("enquiries/<int:pk>/details/", EnquiryDetailsView.as_view(), name="enquiry-details"),
 
     # F02
     path("enquiries/<int:pk>/assign/", EnquiryAssignView.as_view(), name="enquiry-assign"),

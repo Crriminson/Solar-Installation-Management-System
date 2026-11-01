@@ -11,9 +11,11 @@
     are committed, never generated here;
   - a failure shows the real reason and keeps everything typed, so it
     can be retried without re-entering anything;
-  - only name, phone and address are required. Electricity details are
-    optional because people rarely have their bill to hand, and an
-    enquiry is worth more than a complete form.
+  - only name, phone and address are required, and only those, the
+    capacity and what the customer wants are shown at first. Everything
+    else sits in closed groups: people rarely have their bill to hand,
+    an enquiry is worth more than a complete form, and staff fill in
+    the rest from the enquiry later.
 */
 
 import { useState } from "react";
@@ -23,17 +25,14 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { describeError, fieldErrorsFrom } from "../../api/client";
 import BrandShell from "../../components/BrandShell";
 import Button, { ButtonLink } from "../../components/Button";
-import {
-  FileField,
-  SelectField,
-  TextAreaField,
-  TextField,
-} from "../../components/Field";
+import { SelectField, TextAreaField, TextField } from "../../components/Field";
 import PageHeader from "../../components/PageHeader";
 import Reference from "../../components/Reference";
 import { submitEnquiry } from "./api";
+import { ABOUT_FIELDS, BILL_FIELDS, groupHasError } from "./detail_groups";
+import { AboutFields, BillFields, OptionalSection } from "./enquiry_detail_fields";
 import { INDIAN_STATES } from "./states";
-import type { EnquiryFormValues } from "./types";
+import type { EnquiryCreated, EnquiryFormValues } from "./types";
 import styles from "./EnquiryForm.module.css";
 
 const EMPTY_FORM: EnquiryFormValues = {
@@ -65,20 +64,7 @@ const SOURCE_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
-const CUSTOMER_TYPE_OPTIONS = [
-  { value: "residential", label: "Home" },
-  { value: "commercial", label: "Business" },
-];
-
-const SYSTEM_TYPE_OPTIONS = [
-  { value: "undecided", label: "Not sure yet" },
-  { value: "on_grid", label: "On-grid" },
-  { value: "off_grid", label: "Off-grid, with battery" },
-];
-
 const STATE_OPTIONS = INDIAN_STATES.map((state) => ({ value: state, label: state }));
-
-const BILL_FILE_TYPES = ".pdf,.jpg,.jpeg,.png";
 
 interface EnquiryFormProps {
   staff?: boolean;
@@ -88,12 +74,12 @@ export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
   const queryClient = useQueryClient();
   const [values, setValues] = useState<EnquiryFormValues>(EMPTY_FORM);
   const [bill, setBill] = useState<File | null>(null);
-  const [reference, setReference] = useState<string | null>(null);
+  const [saved, setSaved] = useState<EnquiryCreated | null>(null);
 
   const mutation = useMutation({
     mutationFn: submitEnquiry,
     onSuccess: (data) => {
-      setReference(data.reference);
+      setSaved(data);
       if (staff) queryClient.invalidateQueries({ queryKey: ["enquiries"] });
     },
   });
@@ -106,7 +92,7 @@ export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
   function startAnother() {
     setValues(EMPTY_FORM);
     setBill(null);
-    setReference(null);
+    setSaved(null);
     mutation.reset();
   }
 
@@ -126,10 +112,8 @@ export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
     };
   }
 
-  if (reference) {
-    return (
-      <Confirmation reference={reference} staff={staff} onAnother={startAnother} />
-    );
+  if (saved) {
+    return <Confirmation saved={saved} staff={staff} onAnother={startAnother} />;
   }
 
   const form = (
@@ -154,18 +138,6 @@ export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
             autoComplete="tel"
             hint="10 digits. +91 is fine."
             {...bind("phone")}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            {...bind("email")}
-          />
-          <SelectField
-            label="Property type"
-            options={CUSTOMER_TYPE_OPTIONS}
-            {...bind("customer_type")}
           />
           {staff && (
             <SelectField
@@ -202,64 +174,49 @@ export default function EnquiryForm({ staff = false }: EnquiryFormProps) {
             autoComplete="postal-code"
             {...bind("pincode")}
           />
-          <TextField
-            label="Shadow-free roof area"
-            inputMode="decimal"
-            unit="m²"
-            hint="Open to the sun for most of the day."
-            {...bind("shadow_free_roof_area_sqm")}
-          />
         </div>
       </section>
 
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Electricity use</h2>
-        <p className={styles.hint}>All optional. Skip anything you do not know.</p>
+        <h2 className={styles.sectionTitle}>What you need</h2>
         <div className={styles.grid}>
-          <SelectField
-            label="System type"
-            options={SYSTEM_TYPE_OPTIONS}
-            {...bind("requested_system_type")}
-          />
           <TextField
             label="Capacity wanted"
             inputMode="decimal"
             unit="kW"
+            hint="Leave blank if you are not sure."
             {...bind("requested_capacity_kw")}
           />
-          <TextField
-            label="Connection number"
-            hint="Printed on the electricity bill."
-            {...bind("electricity_connection_number")}
-          />
-          {/* Bill amount and units are asked separately on purpose:
-              a slabbed tariff means neither gives you the other. */}
-          <TextField
-            label="Monthly bill"
-            inputMode="decimal"
-            unit="₹"
-            {...bind("monthly_bill_amount")}
-          />
-          <TextField
-            label="Monthly units"
-            inputMode="decimal"
-            unit="kWh"
-            hint="On the bill, separate from the amount."
-            {...bind("monthly_consumption_kwh")}
-          />
-          <TextField label="Billing period from" type="date" {...bind("billing_period_start")} />
-          <TextField label="Billing period to" type="date" {...bind("billing_period_end")} />
-          <FileField
-            label="Electricity bill"
+          <TextAreaField
+            label="What would you like?"
             wide
-            accept={BILL_FILE_TYPES}
-            hint="PDF, JPEG or PNG, up to 10 MB."
-            error={fieldErrors.electricity_bill?.[0]}
-            onChange={setBill}
+            hint="For example: a lower bill, or power during cuts."
+            {...bind("notes")}
           />
-          <TextAreaField label="Anything else" wide {...bind("notes")} />
         </div>
       </section>
+
+      <p className={styles.hint}>
+        {staff
+          ? "Fill in what the customer knows now. The rest can be added from the enquiry later."
+          : "Have your bill to hand? Add it below. If not, we will ask when we call."}
+      </p>
+
+      <OptionalSection
+        title={staff ? "More about the customer and roof" : "More about you and your roof"}
+        summary="Email, property type, system type, roof area"
+        hasError={groupHasError(ABOUT_FIELDS, fieldErrors)}
+      >
+        <AboutFields bind={bind} />
+      </OptionalSection>
+
+      <OptionalSection
+        title="From the electricity bill"
+        summary="Connection number, bill amount, units, the bill itself"
+        hasError={groupHasError(BILL_FIELDS, fieldErrors)}
+      >
+        <BillFields bind={bind} billError={fieldErrors.electricity_bill?.[0]} onBill={setBill} />
+      </OptionalSection>
 
       <Button
         type="submit"
@@ -334,13 +291,17 @@ function PublicPitch() {
   );
 }
 
-/* Shown after the records are committed. */
+/*
+  Shown after the records are committed. Staff go straight to the
+  enquiry they saved: searching by its reference puts it on the first
+  page of the queue, so its panel opens whatever else is waiting.
+*/
 function Confirmation({
-  reference,
+  saved,
   staff,
   onAnother,
 }: {
-  reference: string;
+  saved: EnquiryCreated;
   staff: boolean;
   onAnother: () => void;
 }) {
@@ -351,12 +312,18 @@ function Confirmation({
       </h1>
       <p>{staff ? "Its reference is:" : "Keep this reference for any follow-up:"}</p>
       <p className={styles.reference}>
-        <Reference>{reference}</Reference>
+        <Reference>{saved.reference}</Reference>
       </p>
       {staff ? (
         <div className={styles.actions}>
-          <ButtonLink to="/enquiries">Back to enquiries</ButtonLink>
+          {saved.id !== undefined && (
+            <ButtonLink variant="primary"
+              to={`/enquiries?search=${encodeURIComponent(saved.reference)}&selected=${saved.id}`}>
+              Open enquiry
+            </ButtonLink>
+          )}
           <Button onClick={onAnother}>Add another</Button>
+          <ButtonLink variant="quiet" to="/enquiries">Back to enquiries</ButtonLink>
         </div>
       ) : (
         <p>Our team will call you shortly to discuss your roof.</p>

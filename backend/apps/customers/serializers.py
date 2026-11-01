@@ -95,37 +95,65 @@ class EnquiryListSerializer(serializers.ModelSerializer):
 # Writing
 # ============================================================
 
-class EnquiryCreateSerializer(serializers.Serializer):
-    """
-    One flat payload from the enquiry form.
+# Which record each optional detail lives on. The enquiry form sends
+# them flat; saving splits them across the three records.
+CUSTOMER_DETAIL_FIELDS = ["email", "customer_type"]
+SITE_DETAIL_FIELDS = ["shadow_free_roof_area_sqm"]
+NON_NEGATIVE_FIELDS = [
+    "shadow_free_roof_area_sqm", "requested_capacity_kw",
+    "monthly_consumption_kwh", "monthly_bill_amount",
+]
 
-    Only the fields needed to contact the customer and find the roof are
-    required. Everything about electricity usage is optional, because a
-    caller often does not have their bill to hand and we would rather
-    capture the enquiry than lose it over a missing number.
+
+def check_usage_values(values):
+    """
+    The rules for the optional details, wherever they are entered.
+
+    A bill amount means nothing without the period it covers, so either
+    one asks for both ends of the period. Sizes, units and money are
+    never negative.
+    """
+    for field in NON_NEGATIVE_FIELDS:
+        if values.get(field) is not None and values[field] < 0:
+            raise serializers.ValidationError({field: "Enter a non-negative value."})
+    start = values.get("billing_period_start")
+    end = values.get("billing_period_end")
+    if values.get("monthly_bill_amount") is not None or start or end:
+        missing = {}
+        if not start:
+            missing["billing_period_start"] = "Enter the start of the bill's billing period."
+        if not end:
+            missing["billing_period_end"] = "Enter the end of the bill's billing period."
+        if missing:
+            raise serializers.ValidationError(missing)
+    if start and end and end < start:
+        raise serializers.ValidationError(
+            {"billing_period_end": "Billing period cannot end before it starts."}
+        )
+
+
+class EnquiryDetailsFields(serializers.Serializer):
+    """
+    Everything about an enquiry that may be unknown when it arrives.
+
+    Shared by the form and by the later edit, so the two cannot accept
+    different things. All optional: a caller often does not have their
+    bill to hand, and we would rather capture the enquiry than lose it
+    over a missing number.
     """
 
     # Customer
-    full_name = serializers.CharField(max_length=150)
-    phone = serializers.CharField(max_length=20)
     email = serializers.EmailField(required=False, allow_blank=True)
     customer_type = serializers.ChoiceField(
         choices=CustomerType.choices, default=CustomerType.RESIDENTIAL
     )
 
     # Site
-    address_line = serializers.CharField(max_length=255)
-    city = serializers.CharField(max_length=100)
-    state = serializers.ChoiceField(choices=INDIAN_STATES)
-    pincode = serializers.CharField(max_length=10)
     shadow_free_roof_area_sqm = serializers.DecimalField(
         max_digits=8, decimal_places=2, required=False, allow_null=True
     )
 
     # Enquiry
-    source = serializers.ChoiceField(
-        choices=EnquirySource.choices, default=EnquirySource.WEB_FORM
-    )
     requested_system_type = serializers.ChoiceField(
         choices=SystemType.choices, default=SystemType.UNDECIDED
     )
@@ -145,6 +173,34 @@ class EnquiryCreateSerializer(serializers.Serializer):
     billing_period_end = serializers.DateField(required=False, allow_null=True)
     electricity_bill = serializers.FileField(required=False, allow_null=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+
+    def validate_electricity_bill(self, value):
+        """The form is open to the public, so nothing is taken on trust."""
+        return validate_upload(value) if value else value
+
+
+class EnquiryCreateSerializer(EnquiryDetailsFields):
+    """
+    One flat payload from the enquiry form.
+
+    Only the fields needed to contact the customer and find the roof are
+    required; the rest are the optional details above.
+    """
+
+    # Customer
+    full_name = serializers.CharField(max_length=150)
+    phone = serializers.CharField(max_length=20)
+
+    # Site
+    address_line = serializers.CharField(max_length=255)
+    city = serializers.CharField(max_length=100)
+    state = serializers.ChoiceField(choices=INDIAN_STATES)
+    pincode = serializers.CharField(max_length=10)
+
+    # Enquiry
+    source = serializers.ChoiceField(
+        choices=EnquirySource.choices, default=EnquirySource.WEB_FORM
+    )
 
     def validate_phone(self, value):
         """
@@ -168,29 +224,8 @@ class EnquiryCreateSerializer(serializers.Serializer):
             )
         return digits
 
-    def validate_electricity_bill(self, value):
-        """This field is open to the public, so nothing is taken on trust."""
-        return validate_upload(value) if value else value
-
     def validate(self, data):
-        for field in ("shadow_free_roof_area_sqm", "requested_capacity_kw",
-                      "monthly_consumption_kwh", "monthly_bill_amount"):
-            if data.get(field) is not None and data[field] < 0:
-                raise serializers.ValidationError({field: "Enter a non-negative value."})
-        start = data.get("billing_period_start")
-        end = data.get("billing_period_end")
-        if data.get("monthly_bill_amount") is not None or start or end:
-            missing = {}
-            if not start:
-                missing["billing_period_start"] = "Enter the start of the bill's billing period."
-            if not end:
-                missing["billing_period_end"] = "Enter the end of the bill's billing period."
-            if missing:
-                raise serializers.ValidationError(missing)
-        if start and end and end < start:
-            raise serializers.ValidationError(
-                {"billing_period_end": "Billing period cannot end before it starts."}
-            )
+        check_usage_values(data)
         return data
 
     @transaction.atomic
@@ -201,11 +236,8 @@ class EnquiryCreateSerializer(serializers.Serializer):
         Wrapped in a transaction so the caller is never told an enquiry
         succeeded when only part of it was written.
         """
-        customer_fields = ["full_name", "phone", "email", "customer_type"]
-        site_fields = [
-            "address_line", "city", "state", "pincode",
-            "shadow_free_roof_area_sqm",
-        ]
+        customer_fields = ["full_name", "phone", *CUSTOMER_DETAIL_FIELDS]
+        site_fields = ["address_line", "city", "state", "pincode", *SITE_DETAIL_FIELDS]
 
         customer_data = {
             key: validated_data.pop(key)
@@ -245,6 +277,39 @@ class EnquiryCreateSerializer(serializers.Serializer):
         enquiry.save(update_fields=["next_action", "next_action_due"])
         record_event(enquiry, "received", after={"source": enquiry.source})
         return enquiry
+
+
+class EnquiryDetailsSerializer(EnquiryDetailsFields):
+    """
+    Details filled in or corrected after the enquiry arrived.
+
+    Used with partial=True, so only the fields sent are changed and the
+    form's defaults are never applied over what is stored. The usage
+    rules are checked against the stored values merged with the new
+    ones: sending only a bill amount still needs a billing period, on
+    the record or in this request.
+
+    Name, phone and address are not here on purpose. Duplicate detection
+    compares them, so changing them needs its own rule.
+    """
+
+    revision = serializers.IntegerField(min_value=1)
+
+    def validate(self, data):
+        enquiry = self.context["enquiry"]
+        stored = {field: enquiry_detail(enquiry, field) for field in NON_NEGATIVE_FIELDS
+                  + ["billing_period_start", "billing_period_end"]}
+        check_usage_values({**stored, **data})
+        return data
+
+
+def enquiry_detail(enquiry, field):
+    """Reads one optional detail from whichever record holds it."""
+    if field in CUSTOMER_DETAIL_FIELDS:
+        return getattr(enquiry.site.customer, field)
+    if field in SITE_DETAIL_FIELDS:
+        return getattr(enquiry.site, field)
+    return getattr(enquiry, field)
 
 
 # ============================================================
